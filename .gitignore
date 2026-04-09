@@ -1,0 +1,5 @@
+# GCP service account keys (never commit)
+mlops-491304-*.json
+**/*-credentials.json
+credentials/
+.env
