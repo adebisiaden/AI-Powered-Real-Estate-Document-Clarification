@@ -27,7 +27,7 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>Contract Review</h1>
-        <p className="App-tagline">Phase 2 — upload &amp; extract</p>
+        <p className="App-tagline">AI-powered contract analysis</p>
 
         <FileUploadDropzone />
 

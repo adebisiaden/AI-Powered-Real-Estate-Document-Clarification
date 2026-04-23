@@ -1,13 +1,16 @@
 import io
+import json
 import os
 import uuid
 from pathlib import Path
 
+from google import genai
 from docx import Document
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from google.cloud import storage
+from pydantic import BaseModel
 from PyPDF2 import PdfReader
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -20,10 +23,17 @@ if _creds:
         _p = (BASE_DIR / _p).resolve()
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(_p)
 
+# ----------------------------
+# Gemini setup (via Vertex AI)
+# ----------------------------
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY"),
+)
+
 ALLOWED_EXTENSIONS = {".pdf", ".docx"}
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
-app = FastAPI(title="Contract Review API", version="0.2.0")
+app = FastAPI(title="Contract Review API", version="0.4.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,6 +47,16 @@ app.add_middleware(
 )
 
 
+# ----------------------------
+# Schemas
+# ----------------------------
+class AnalyzeRequest(BaseModel):
+    text: str
+
+
+# ----------------------------
+# Helpers
+# ----------------------------
 def _original_filename(upload: UploadFile) -> str:
     name = (upload.filename or "").strip()
     if not name:
@@ -103,8 +123,8 @@ def _upload_to_gcs(content: bytes, dest_blob_name: str, content_type: str) -> No
         )
     project = os.getenv("GCP_PROJECT_ID")
     try:
-        client = storage.Client(project=project) if project else storage.Client()
-        bucket = client.bucket(bucket_name)
+        gcs_client = storage.Client(project=project) if project else storage.Client()
+        bucket = gcs_client.bucket(bucket_name)
         blob = bucket.blob(dest_blob_name)
         blob.upload_from_string(content, content_type=content_type)
     except HTTPException:
@@ -123,6 +143,40 @@ def _mime_for_filename(filename: str) -> str:
     return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
+def _analyze_with_gemini(text: str) -> dict:
+    prompt = f"""
+    You are a legal contract analysis assistant.
+    Analyze the following contract and return a JSON object with exactly these three keys:
+
+    1. "clauses": a list of objects, each with "type" (clause name from CUAD's 41 categories)
+       and "excerpt" (the relevant quote from the contract)
+    2. "risks": a list of objects, each with "issue" (short title) and
+       "explanation" (plain English description of the risk)
+    3. "summary": a 2-3 sentence plain English overview of what this contract is and
+       its most important terms
+
+    Return ONLY valid JSON, no markdown, no extra text.
+
+    Contract text:
+    {text[:12000]}
+    """
+    try:
+        response = client.models.generate_content(
+            model=os.getenv("GEMINI_MODEL", "gemini-2.0-flash"),
+            contents=prompt,
+        )
+        clean = response.text.strip().removeprefix("```json").removesuffix("```").strip()
+        return json.loads(clean)
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gemini analysis failed: {e!s}",
+        ) from e
+
+
+# ----------------------------
+# Endpoints
+# ----------------------------
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -143,12 +197,22 @@ async def upload(file: UploadFile = File(...)):
         )
 
     text = _extract_text(content, filename)
+
     ext = _extension(filename)
     blob_name = f"uploads/{uuid.uuid4()}{ext}"
     _upload_to_gcs(content, blob_name, _mime_for_filename(filename))
 
+    analysis = _analyze_with_gemini(text)
+
     return {
         "filename": filename,
         "text": text,
+        "analysis": analysis,
         "status": "success",
     }
+
+
+@app.post("/analyze")
+async def analyze(data: AnalyzeRequest):
+    analysis = _analyze_with_gemini(data.text)
+    return {"analysis": analysis}

@@ -12,7 +12,12 @@ module.exports = function (app) {
         pathname === '/upload' ||
         pathname === '/openapi.json' ||
         pathname.startsWith('/docs'),
-      { target, changeOrigin: true }
+      {
+        target,
+        changeOrigin: true,
+        proxyTimeout: 120000,  // 2 minutes
+        timeout: 120000,
+      }
     )
   );
 };

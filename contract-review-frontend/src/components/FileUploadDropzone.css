@@ -109,6 +109,8 @@
 .alert--success {
   background: rgba(46, 204, 113, 0.15);
   border: 1px solid rgba(46, 204, 113, 0.4);
+  max-height: 600px;
+  overflow-y: auto;
 }
 
 .alert--error {
@@ -145,3 +147,73 @@
   font-size: 0.8rem;
   opacity: 0.75;
 }
+
+.analysis-section {
+  margin-top: 1.25rem;
+  text-align: left;
+}
+
+.analysis-section h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.6rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.analysis-summary {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.risk-item {
+  background: rgba(255, 80, 80, 0.1);
+  border-left: 3px solid #ff5050;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+}
+
+.risk-item strong {
+  font-size: 0.88rem;
+}
+
+.risk-item p {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.clause-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid #4a90e2;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+}
+
+.clause-item strong {
+  font-size: 0.88rem;
+}
+
+.clause-excerpt {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  opacity: 0.7;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.analyzing-label {
+  font-size: 0.85rem;
+  opacity: 0.85;
+  animation: pulse 1.5s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+

@@ -21,7 +21,7 @@ function detailFromAxiosError(err) {
   const d = err.response?.data?.detail;
   if (typeof d === 'string') {
     if (status === 404 && d === 'Not Found') {
-      return `${d} (HTTP 404). Run the Phase 2 API from folder contract-review-backend: uvicorn main:app --reload --host 0.0.0.0 --port 8000 (not app.main from the repo root).`;
+      return `${d} (HTTP 404). Run the Phase 2 API from folder contract-review-backend: uvicorn main:app --reload --host 0.0.0.0 --port 8000`;
     }
     return d;
   }
@@ -164,7 +164,7 @@ export function FileUploadDropzone() {
         }}
         disabled={!file || uploading}
       >
-        {uploading ? 'Uploading…' : 'Upload'}
+        {uploading ? 'Analyzing…' : 'Upload & Analyze'}
       </button>
 
       {uploading && (
@@ -176,21 +176,50 @@ export function FileUploadDropzone() {
             />
           </div>
           <span className="progress-label">{progress}%</span>
+          {progress === 100 && (
+            <span className="analyzing-label">Analyzing with Gemini...</span>
+          )}
         </div>
       )}
 
       {result?.status === 'success' && (
         <div className="alert alert--success" role="status">
           <p>
-            <strong>Success</strong> — processed {result.filename}
+            <strong>✓ Analysis complete</strong> — {result.filename}
           </p>
-          {result.text != null && result.text.length > 0 ? (
-            <pre className="extract-preview">{result.text.slice(0, 2000)}</pre>
-          ) : (
-            <p className="extract-empty">No text could be extracted (file may be image-only).</p>
+
+          {result.analysis?.summary && (
+            <div className="analysis-section">
+              <h3>Summary</h3>
+              <p className="analysis-summary">{result.analysis.summary}</p>
+            </div>
           )}
-          {result.text != null && result.text.length > 2000 && (
-            <p className="extract-truncated">Showing first 2000 characters.</p>
+
+          {result.analysis?.risks?.length > 0 && (
+            <div className="analysis-section">
+              <h3>⚠️ Risk Flags ({result.analysis.risks.length})</h3>
+              {result.analysis.risks.map((risk, i) => (
+                <div key={i} className="risk-item">
+                  <strong>{risk.issue}</strong>
+                  <p>{risk.explanation}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {result.analysis?.clauses?.length > 0 && (
+            <div className="analysis-section">
+              <h3>📋 Identified Clauses ({result.analysis.clauses.length})</h3>
+              {result.analysis.clauses.map((clause, i) => (
+                <div key={i} className="clause-item">
+                  <strong>{clause.type}</strong>
+                  <p className="clause-excerpt">
+                    "{clause.excerpt.slice(0, 200)}
+                    {clause.excerpt.length > 200 ? '…' : ''}"
+                  </p>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
