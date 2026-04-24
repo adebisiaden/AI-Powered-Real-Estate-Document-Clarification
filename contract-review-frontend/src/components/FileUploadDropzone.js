@@ -1,7 +1,16 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 import { apiUrl } from '../api';
 import './FileUploadDropzone.css';
+
+// eslint-disable-next-line no-new
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 const ACCEPT = '.pdf,.docx';
 
@@ -38,7 +47,36 @@ export function FileUploadDropzone() {
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('summary');
+  const [activeTab, setActiveTab]   = useState('summary');
+  const [numPages, setNumPages]     = useState(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pdfUrl, setPdfUrl]         = useState(null);
+  const pdfContainerRef             = useRef(null);
+  const [pdfContainerWidth, setPdfContainerWidth] = useState(0);
+
+  useEffect(() => {
+    if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
+      setPdfUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPdfUrl(url);
+    setPageNumber(1);
+    setNumPages(null);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  useEffect(() => {
+    if (!pdfUrl) return;
+    const el = pdfContainerRef.current;
+    if (!el) return;
+    setPdfContainerWidth(el.getBoundingClientRect().width);
+    const observer = new ResizeObserver(([entry]) =>
+      setPdfContainerWidth(entry.contentRect.width)
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [pdfUrl]);
 
   const resetMessages = useCallback(() => {
     setResult(null);
@@ -108,6 +146,8 @@ export function FileUploadDropzone() {
         },
       });
       setResult(data);
+      console.log('Full API response:', data);
+      console.log('Risks array:', data?.analysis?.risks);
       setProgress(100);
       setActiveTab('summary');
     } catch (err) {
@@ -118,8 +158,8 @@ export function FileUploadDropzone() {
     }
   };
 
-  const risksCount = result?.analysis?.risks?.length ?? 0;
-  const clausesCount = result?.analysis?.clauses?.length ?? 0;
+  const risksCount   = result?.analysis?.risks?.length ?? 0;
+  const clausesCount = result?.analysis?.clauses?.filter(c => c.found)?.length ?? 0;
 
   return (
     <div className="split-layout">
@@ -203,12 +243,50 @@ export function FileUploadDropzone() {
             </div>
           )}
 
-          {result?.extracted_text && (
+          {pdfUrl ? (
+            <div className="extract-section">
+              <h3 className="extract-heading">Contract Preview</h3>
+              <div className="pdf-viewer" ref={pdfContainerRef}>
+                <Document
+                  file={pdfUrl}
+                  onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+                  loading={<p className="pdf-loading">Loading PDF…</p>}
+                  error={<p className="pdf-loading">Could not load PDF preview.</p>}
+                >
+                  <Page
+                    pageNumber={pageNumber}
+                    width={pdfContainerWidth || undefined}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                  />
+                </Document>
+              </div>
+              <div className="pdf-nav">
+                <button
+                  className="pdf-nav-btn"
+                  onClick={() => setPageNumber(p => Math.max(1, p - 1))}
+                  disabled={pageNumber <= 1}
+                >
+                  ← Prev
+                </button>
+                <span className="pdf-page-label">
+                  Page {pageNumber} of {numPages ?? '…'}
+                </span>
+                <button
+                  className="pdf-nav-btn"
+                  onClick={() => setPageNumber(p => Math.min(numPages ?? p, p + 1))}
+                  disabled={pageNumber >= (numPages ?? 1)}
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          ) : result?.text ? (
             <div className="extract-section">
               <h3 className="extract-heading">Contract Text</h3>
-              <pre className="extract-preview">{result.extracted_text}</pre>
+              <pre className="extract-preview">{result.text}</pre>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -247,7 +325,12 @@ export function FileUploadDropzone() {
                     <div className="metric-card">
                       <span className="metric-label">Risk Level</span>
                       <span className="metric-value">
-                        {risksCount > 5 ? 'High' : risksCount > 2 ? 'Medium' : 'Low'}
+                        {(() => {
+                          const risks = result.analysis?.risks || [];
+                          if (risks.some(r => r.risk_level === 'High'))   return 'High';
+                          if (risks.some(r => r.risk_level === 'Medium')) return 'Medium';
+                          return 'Low';
+                        })()}
                       </span>
                     </div>
                     <div className="metric-card">
@@ -264,12 +347,15 @@ export function FileUploadDropzone() {
                     result.analysis.risks.map((risk, i) => (
                       <div
                         key={i}
-                        className={`risk-item ${
-                          risk.severity === 'high' ? 'risk-item--high' : 'risk-item--medium'
-                        }`}
+                        className={`risk-item risk-item--${(risk.risk_level || 'medium').toLowerCase()}`}
                       >
-                        <strong>{risk.issue}</strong>
-                        <p>{risk.explanation}</p>
+                        <div className="risk-item-header">
+                          <strong>{risk.clause}</strong>
+                          <span className={`risk-badge risk-badge--${(risk.risk_level || 'medium').toLowerCase()}`}>
+                            {risk.risk_level || 'Medium'}
+                          </span>
+                        </div>
+                        <p>{risk.reason}</p>
                       </div>
                     ))
                   ) : (
@@ -280,19 +366,38 @@ export function FileUploadDropzone() {
 
               {activeTab === 'clauses' && (
                 <div className="analysis-section">
-                  {clausesCount > 0 ? (
-                    result.analysis.clauses.map((clause, i) => (
-                      <div key={i} className="clause-item">
-                        <strong>{clause.type}</strong>
-                        <p className="clause-excerpt">
-                          "{clause.excerpt.slice(0, 200)}
-                          {clause.excerpt.length > 200 ? '…' : ''}"
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="empty-state">No clauses identified.</p>
-                  )}
+                  {(() => {
+                    const all     = result.analysis.clauses || [];
+                    const found   = all.filter(c => c.found);
+                    const missing = all.filter(c => !c.found);
+                    return (
+                      <>
+                        {found.length > 0 ? (
+                          found.map((clause, i) => (
+                            <div key={i} className="clause-item">
+                              <strong>{clause.clause_type}</strong>
+                              <p className="clause-excerpt">
+                                "{(clause.text || '').slice(0, 200)}
+                                {(clause.text || '').length > 200 ? '…' : ''}"
+                              </p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="empty-state">No clauses identified.</p>
+                        )}
+                        {missing.length > 0 && (
+                          <div className="missing-clauses">
+                            <h4 className="missing-heading">Not Found ({missing.length})</h4>
+                            <div className="missing-list">
+                              {missing.map((clause, i) => (
+                                <span key={i} className="missing-tag">{clause.clause_type}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>

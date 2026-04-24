@@ -299,6 +299,18 @@
   border-left: 3px solid #ffb432;
 }
 
+.risk-item--low {
+  background: rgba(46, 204, 113, 0.08);
+  border-left: 3px solid #2ecc71;
+}
+
+.risk-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .risk-item strong {
   font-size: 0.88rem;
 }
@@ -307,6 +319,49 @@
   margin: 0.25rem 0 0;
   font-size: 0.82rem;
   opacity: 0.85;
+}
+
+.risk-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.risk-badge--high   { background: rgba(255, 80, 80, 0.25);  color: #ff7070; }
+.risk-badge--medium { background: rgba(255, 180, 50, 0.25); color: #ffb432; }
+.risk-badge--low    { background: rgba(46, 204, 113, 0.2);  color: #2ecc71; }
+
+.missing-clauses {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.missing-heading {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  opacity: 0.5;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.missing-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.missing-tag {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  opacity: 0.55;
 }
 
 .clause-item {
@@ -343,6 +398,68 @@
   font-size: 0.9rem;
   text-align: center;
   padding: 2rem;
+}
+
+/* ── PDF viewer ───────────────────────────────────────────── */
+
+.pdf-viewer {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #0d0f14;
+  border-radius: 6px;
+  padding: 0.5rem 0;
+  min-height: 0;
+}
+
+.pdf-viewer .react-pdf__Page {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pdf-loading {
+  font-size: 0.82rem;
+  opacity: 0.6;
+  padding: 1rem;
+  margin: 0;
+}
+
+.pdf-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  flex-shrink: 0;
+}
+
+.pdf-nav-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 4px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pdf-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pdf-nav-btn:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.pdf-page-label {
+  font-size: 0.82rem;
+  opacity: 0.7;
+  min-width: 8rem;
+  text-align: center;
 }
 
 /* ── Mobile: stack vertically ─────────────────────────────── */
