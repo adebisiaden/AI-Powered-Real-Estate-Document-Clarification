@@ -1,0 +1,8 @@
+"datasets>=2.14.0,<3.0.0"
+google-cloud-aiplatform
+google-cloud-storage
+numpy
+tqdm
+python-dotenv
+python-docx
+huggingface_hub
