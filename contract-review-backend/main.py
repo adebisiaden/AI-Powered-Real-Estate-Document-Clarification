@@ -143,17 +143,39 @@ def _mime_for_filename(filename: str) -> str:
     return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
-def _analyze_with_gemini(text: str) -> dict:
-    prompt = f"""
-    You are a legal contract analysis assistant.
-    Analyze the following contract and return a JSON object with exactly these three keys:
+CUAD_CLAUSE_TYPES = [
+    "Effective Date", "Expiration Date", "Renewal Term", "Notice Period to Terminate Renewal",
+    "Governing Law", "Most Favored Nation", "Non-Compete", "Exclusivity",
+    "No-Solicit of Customers", "No-Solicit of Employees", "Non-Disparagement",
+    "Limitation of Liability", "Cap on Liability", "Liquidated Damages",
+    "Uncapped Liability", "Indemnification", "Insurance", "Warranty Duration",
+    "IP Ownership Assignment", "Joint IP Ownership", "License Grant",
+    "Non-Transferable License", "Affiliate License Grant", "Affiliate License Revoke",
+    "Irrevocable or Perpetual License", "Source Code Escrow", "Post-Termination Services",
+    "Audit Rights", "Minimum Commitment", "Volume Restriction", "Price Restrictions",
+    "Anti-Assignment", "Change of Control", "Termination for Convenience",
+    "ROFR/ROFO/ROFN", "Competitive Restriction Exception", "Third Party Beneficiary",
+    "Revenue/Profit Sharing", "Parties", "Agreement Date", "Document Name"
+]
 
-    1. "clauses": a list of objects, each with "type" (clause name from CUAD's 41 categories)
-       and "excerpt" (the relevant quote from the contract)
-    2. "risks": a list of objects, each with "issue" (short title) and
-       "explanation" (plain English description of the risk)
-    3. "summary": a 2-3 sentence plain English overview of what this contract is and
-       its most important terms
+def _analyze_with_gemini(text: str) -> dict:
+    clause_list = "\n".join(f"- {c}" for c in CUAD_CLAUSE_TYPES)
+    prompt = f"""
+    You are a legal contract analysis assistant trained on the CUAD dataset 
+    (Contract Understanding Atticus Dataset), a benchmark legal dataset of 
+    500+ contracts annotated by expert lawyers.
+
+    Analyze the following contract using CUAD's 41 expert-labeled clause categories:
+    {clause_list}
+
+    Return a JSON object with exactly these three keys:
+
+    1. "clauses": list of objects with "type" (from the CUAD categories above) 
+       and "excerpt" (relevant quote, max 200 chars)
+    2. "risks": list of objects with "issue" (short title) and 
+       "explanation" (plain English, 1-2 sentences)
+    3. "summary": 2-3 sentence plain English overview of the contract 
+       and its most important terms
 
     Return ONLY valid JSON, no markdown, no extra text.
 

@@ -38,6 +38,7 @@ export function FileUploadDropzone() {
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('summary');
 
   const resetMessages = useCallback(() => {
     setResult(null);
@@ -108,6 +109,7 @@ export function FileUploadDropzone() {
       });
       setResult(data);
       setProgress(100);
+      setActiveTab('summary');
     } catch (err) {
       setError(detailFromAxiosError(err));
       setProgress(0);
@@ -116,119 +118,192 @@ export function FileUploadDropzone() {
     }
   };
 
-  return (
-    <section className="upload-section" aria-label="File upload">
-      <h2>Upload contract</h2>
-      <p className="upload-hint">PDF or DOCX only</p>
+  const risksCount = result?.analysis?.risks?.length ?? 0;
+  const clausesCount = result?.analysis?.clauses?.length ?? 0;
 
-      <div
-        className={`dropzone ${dragActive ? 'dropzone--active' : ''}`}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onClick={() => inputRef.current?.click()}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            inputRef.current?.click();
-          }
-        }}
-      >
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPT}
-          className="dropzone-input"
-          onChange={onInputChange}
-        />
-        <span className="dropzone-text">
-          Drag and drop a file here, or click to browse
-        </span>
+  return (
+    <div className="split-layout">
+
+      {/* LEFT PANEL */}
+      <div className="panel panel--left">
+        <div className="panel-inner">
+          <h2>Upload Contract</h2>
+          <p className="upload-hint">PDF or DOCX only</p>
+
+          <div
+            className={`dropzone ${dragActive ? 'dropzone--active' : ''}`}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onClick={() => inputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                inputRef.current?.click();
+              }
+            }}
+          >
+            <input
+              ref={inputRef}
+              type="file"
+              accept={ACCEPT}
+              className="dropzone-input"
+              onChange={onInputChange}
+            />
+            <span className="dropzone-text">
+              Drag and drop a file here, or click to browse
+            </span>
+          </div>
+
+          {file && (
+            <div className="file-meta">
+              <strong>{file.name}</strong>
+              <span>{formatBytes(file.size)}</span>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="upload-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              upload();
+            }}
+            disabled={!file || uploading}
+          >
+            {uploading ? 'Analyzing…' : 'Upload & Analyze'}
+          </button>
+
+          {uploading && (
+            <div className="progress-wrap" aria-live="polite">
+              <div className="progress-bar">
+                <div
+                  className="progress-bar-fill"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span className="progress-label">{progress}%</span>
+              {progress === 100 && (
+                <span className="analyzing-label">Analyzing with Gemini...</span>
+              )}
+            </div>
+          )}
+
+          {result?.status === 'success' && (
+            <div className="status-complete" role="status">
+              ✓ Analysis complete — {result.filename}
+            </div>
+          )}
+
+          {error && (
+            <div className="alert alert--error" role="alert">
+              {error}
+            </div>
+          )}
+
+          {result?.extracted_text && (
+            <div className="extract-section">
+              <h3 className="extract-heading">Contract Text</h3>
+              <pre className="extract-preview">{result.extracted_text}</pre>
+            </div>
+          )}
+        </div>
       </div>
 
-      {file && (
-        <div className="file-meta">
-          <strong>{file.name}</strong>
-          <span>{formatBytes(file.size)}</span>
-        </div>
-      )}
+      {/* RIGHT PANEL */}
+      <div className="panel panel--right">
+        {result?.status === 'success' ? (
+          <>
+            <div className="tab-bar">
+              <button
+                className={`tab-btn ${activeTab === 'summary' ? 'tab-btn--active' : ''}`}
+                onClick={() => setActiveTab('summary')}
+              >
+                Summary
+              </button>
+              <button
+                className={`tab-btn ${activeTab === 'risks' ? 'tab-btn--active' : ''}`}
+                onClick={() => setActiveTab('risks')}
+              >
+                Risk Flags{risksCount > 0 ? ` (${risksCount})` : ''}
+              </button>
+              <button
+                className={`tab-btn ${activeTab === 'clauses' ? 'tab-btn--active' : ''}`}
+                onClick={() => setActiveTab('clauses')}
+              >
+                Identified Clauses{clausesCount > 0 ? ` (${clausesCount})` : ''}
+              </button>
+            </div>
 
-      <button
-        type="button"
-        className="upload-btn"
-        onClick={(e) => {
-          e.stopPropagation();
-          upload();
-        }}
-        disabled={!file || uploading}
-      >
-        {uploading ? 'Analyzing…' : 'Upload & Analyze'}
-      </button>
+            <div className="tab-content">
+              {activeTab === 'summary' && (
+                <div className="analysis-section">
+                  {result.analysis?.summary && (
+                    <p className="analysis-summary">{result.analysis.summary}</p>
+                  )}
+                  <div className="metrics-row">
+                    <div className="metric-card">
+                      <span className="metric-label">Risk Level</span>
+                      <span className="metric-value">
+                        {risksCount > 5 ? 'High' : risksCount > 2 ? 'Medium' : 'Low'}
+                      </span>
+                    </div>
+                    <div className="metric-card">
+                      <span className="metric-label">Clauses Found</span>
+                      <span className="metric-value">{clausesCount}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-      {uploading && (
-        <div className="progress-wrap" aria-live="polite">
-          <div className="progress-bar">
-            <div
-              className="progress-bar-fill"
-              style={{ width: `${progress}%` }}
-            />
+              {activeTab === 'risks' && (
+                <div className="analysis-section">
+                  {risksCount > 0 ? (
+                    result.analysis.risks.map((risk, i) => (
+                      <div
+                        key={i}
+                        className={`risk-item ${
+                          risk.severity === 'high' ? 'risk-item--high' : 'risk-item--medium'
+                        }`}
+                      >
+                        <strong>{risk.issue}</strong>
+                        <p>{risk.explanation}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="empty-state">No risk flags identified.</p>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'clauses' && (
+                <div className="analysis-section">
+                  {clausesCount > 0 ? (
+                    result.analysis.clauses.map((clause, i) => (
+                      <div key={i} className="clause-item">
+                        <strong>{clause.type}</strong>
+                        <p className="clause-excerpt">
+                          "{clause.excerpt.slice(0, 200)}
+                          {clause.excerpt.length > 200 ? '…' : ''}"
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="empty-state">No clauses identified.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="panel-empty">
+            <p>Upload and analyze a contract to see results here.</p>
           </div>
-          <span className="progress-label">{progress}%</span>
-          {progress === 100 && (
-            <span className="analyzing-label">Analyzing with Gemini...</span>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
-      {result?.status === 'success' && (
-        <div className="alert alert--success" role="status">
-          <p>
-            <strong>✓ Analysis complete</strong> — {result.filename}
-          </p>
-
-          {result.analysis?.summary && (
-            <div className="analysis-section">
-              <h3>Summary</h3>
-              <p className="analysis-summary">{result.analysis.summary}</p>
-            </div>
-          )}
-
-          {result.analysis?.risks?.length > 0 && (
-            <div className="analysis-section">
-              <h3>⚠️ Risk Flags ({result.analysis.risks.length})</h3>
-              {result.analysis.risks.map((risk, i) => (
-                <div key={i} className="risk-item">
-                  <strong>{risk.issue}</strong>
-                  <p>{risk.explanation}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {result.analysis?.clauses?.length > 0 && (
-            <div className="analysis-section">
-              <h3>📋 Identified Clauses ({result.analysis.clauses.length})</h3>
-              {result.analysis.clauses.map((clause, i) => (
-                <div key={i} className="clause-item">
-                  <strong>{clause.type}</strong>
-                  <p className="clause-excerpt">
-                    "{clause.excerpt.slice(0, 200)}
-                    {clause.excerpt.length > 200 ? '…' : ''}"
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {error && (
-        <div className="alert alert--error" role="alert">
-          {error}
-        </div>
-      )}
-    </section>
+    </div>
   );
 }
