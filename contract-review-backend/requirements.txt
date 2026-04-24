@@ -7,3 +7,5 @@ python-docx
 google-cloud-aiplatform
 google-cloud-storage
 google-genai
+numpy
+scikit-learn
