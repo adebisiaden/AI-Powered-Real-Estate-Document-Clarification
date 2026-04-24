@@ -6,8 +6,8 @@ import subprocess
 
 def test_no_hardcoded_secrets():
     result = subprocess.run(
-        ["bandit", "-r", "contract-review-backend/", 
-         "--exclude", "contract-review-backend/mlops",
+        ["bandit", "-r", "contract-review-backend/",
+         "--exclude", "contract-review-backend/mlops,contract-review-backend/.venv",
          "-ll", "-q"],
         capture_output=True,
         text=True

@@ -16,8 +16,11 @@ from fastapi.testclient import TestClient
 
 client = TestClient(app)
 
+MOCK_ANALYSIS = {"summary": "Test summary.", "risks": [], "clauses": []}
+
 def test_upload_response_has_correct_keys():
-    with patch("main._upload_to_gcs", return_value=None):
+    with patch("main._upload_to_gcs", return_value=None), \
+         patch("main._run_rag_pipeline", return_value=MOCK_ANALYSIS):
         with open("tests/fixtures/sample_contract.pdf", "rb") as f:
             response = client.post(
                 "/upload",

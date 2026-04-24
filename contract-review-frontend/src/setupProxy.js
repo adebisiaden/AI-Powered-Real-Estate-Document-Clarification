@@ -10,6 +10,7 @@ module.exports = function (app) {
       (pathname) =>
         pathname === '/health' ||
         pathname === '/upload' ||
+        pathname === '/analyze' ||
         pathname === '/openapi.json' ||
         pathname.startsWith('/docs'),
       {
