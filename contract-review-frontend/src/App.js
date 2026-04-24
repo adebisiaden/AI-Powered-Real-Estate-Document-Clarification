@@ -25,22 +25,23 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>Contract Review</h1>
-        <p className="App-tagline">AI-powered contract analysis</p>
-
-        <FileUploadDropzone />
-
-        <div className="health-row">
-          <button type="button" onClick={checkHealth} disabled={loading}>
+      <nav className="App-nav">
+        <span className="App-nav-title">Contract Review</span>
+        <span className="App-nav-tagline">AI-powered contract analysis</span>
+        <div className="App-nav-health">
+          <button type="button" onClick={checkHealth} disabled={loading} className="health-btn">
             {loading ? 'Calling…' : 'Test /health'}
           </button>
           {healthResponse != null && (
             <pre className="health-output">{JSON.stringify(healthResponse, null, 2)}</pre>
           )}
-          {error != null && <p className="health-error">{String(error)}</p>}
+          {error != null && <span className="health-error">{String(error)}</span>}
         </div>
-      </header>
+      </nav>
+
+      <main className="App-main">
+        <FileUploadDropzone />
+      </main>
     </div>
   );
 }

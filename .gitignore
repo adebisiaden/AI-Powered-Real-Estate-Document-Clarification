@@ -3,3 +3,16 @@ mlops-491304-*.json
 **/*-credentials.json
 credentials/
 .env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+contract-review-backend/mlops/
+
+# Node
+contract-review-frontend/node_modules/
+contract-review-frontend/build/

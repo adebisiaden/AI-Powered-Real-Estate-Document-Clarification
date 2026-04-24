@@ -1,56 +1,91 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root, .App {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 .App {
-  text-align: center;
-}
-
-.App-header {
+  display: flex;
+  flex-direction: column;
   background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  font-size: calc(10px + 2vmin);
   color: white;
-  gap: 1.5rem;
-  padding: 2rem 1rem 3rem;
+  font-size: 14px;
 }
 
-.App-tagline {
-  margin: -0.5rem 0 0;
-  opacity: 0.85;
-  font-size: 0.95rem;
-}
+/* ── Navbar ───────────────────────────────────────────────── */
 
-.health-row {
+.App-nav {
+  height: 56px;
+  flex-shrink: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 0.75rem;
-  margin-top: 0.5rem;
-  width: min(100%, 520px);
+  padding: 0 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: #1e2129;
 }
 
-.App-header button {
+.App-nav-title {
   font-size: 1rem;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
+  font-weight: 700;
+  color: #61dafb;
+  white-space: nowrap;
 }
 
-.App-header button:disabled {
-  opacity: 0.7;
+.App-nav-tagline {
+  font-size: 0.8rem;
+  opacity: 0.55;
+  white-space: nowrap;
+}
+
+.App-nav-health {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.health-btn {
+  font-size: 0.75rem;
+  padding: 0.3rem 0.65rem;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 4px;
+}
+
+.health-btn:disabled {
+  opacity: 0.5;
   cursor: wait;
 }
 
 .health-output {
-  text-align: left;
+  font-size: 0.72rem;
   background: #1a1d23;
-  padding: 1rem;
-  border-radius: 6px;
-  max-width: 90vw;
+  padding: 0.35rem 0.6rem;
+  border-radius: 4px;
+  max-width: 280px;
   overflow: auto;
+  white-space: pre;
+  margin: 0;
+  max-height: 80px;
 }
 
 .health-error {
   color: #ff6b6b;
-  margin: 0;
+  font-size: 0.78rem;
+}
+
+/* ── Main content area ────────────────────────────────────── */
+
+.App-main {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
 }
