@@ -277,3 +277,13 @@ Send pre-extracted text directly for analysis.
 ## Team
 
 MLOps Group Project — Spring Module 2
+
+---
+
+## Future Work
+
+- **Authentication & User Accounts** — Firebase Authentication with Google login. Guest users get in-memory processing (no storage). Logged-in users get private encrypted GCS storage with per-user folder isolation.
+
+- **Accuracy Evaluation** — Benchmark clause extraction against CUAD's expert-labeled ground truth across all 510 contracts and report precision/recall per clause type.
+
+- **Bulk Contract Analysis** — Upload and analyze multiple contracts simultaneously via a queue system, generating a comparative risk report across an entire contract portfolio.
