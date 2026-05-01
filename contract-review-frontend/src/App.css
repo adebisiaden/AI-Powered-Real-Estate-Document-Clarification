@@ -12,8 +12,8 @@ html, body, #root, .App {
 .App {
   display: flex;
   flex-direction: column;
-  background-color: #282c34;
-  color: white;
+  background-color: #f7f3eb;
+  color: #3d2e1e;
   font-size: 14px;
 }
 
@@ -26,61 +26,23 @@ html, body, #root, .App {
   align-items: center;
   gap: 0.75rem;
   padding: 0 1.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: #1e2129;
+  border-bottom: 1px solid rgba(122, 92, 62, 0.2);
+  background-color: #e8dfd0;
 }
 
 .App-nav-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #61dafb;
+  color: #4a6e50;
   white-space: nowrap;
 }
 
 .App-nav-tagline {
   font-size: 0.8rem;
-  opacity: 0.55;
+  color: #8c7060;
   white-space: nowrap;
 }
 
-.App-nav-health {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.health-btn {
-  font-size: 0.75rem;
-  padding: 0.3rem 0.65rem;
-  cursor: pointer;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  border-radius: 4px;
-}
-
-.health-btn:disabled {
-  opacity: 0.5;
-  cursor: wait;
-}
-
-.health-output {
-  font-size: 0.72rem;
-  background: #1a1d23;
-  padding: 0.35rem 0.6rem;
-  border-radius: 4px;
-  max-width: 280px;
-  overflow: auto;
-  white-space: pre;
-  margin: 0;
-  max-height: 80px;
-}
-
-.health-error {
-  color: #ff6b6b;
-  font-size: 0.78rem;
-}
 
 /* ── Main content area ────────────────────────────────────── */
 
