@@ -20,6 +20,9 @@ from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 from google import genai as genai_sdk
 from google.genai import types as genai_types
 
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -274,29 +277,13 @@ Contract to analyze:
 {contract_text}"""
 
 
-def _run_rag_pipeline(text: str) -> dict:
-    if _vectors is None or not _clauses:
-        raise HTTPException(status_code=503, detail="Service starting up, retry in 30s")
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
-    if not text or not text.strip():
-        raise HTTPException(status_code=400, detail="Contract text is empty")
+_executor = ThreadPoolExecutor(max_workers=4)
 
-    # Step 1 — chunk
-    chunks = _chunk_text(text)
-
-    # Step 2 — embed chunks
-    try:
-        chunk_vectors = _embed_chunks(chunks)
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Embedding failed: {exc!s}") from exc
-
-    # Step 3 — retrieve top CUAD/ACORD matches
-    similar = _retrieve_top_clauses(chunk_vectors)
-
-    # Step 4 — build prompt
-    prompt = _build_prompt(text, similar)
-
-    # Step 5 — call Gemini Pro
+def _analyze_single_chunk(chunk_text: str, similar_clauses: list[dict]) -> dict:
+    prompt = _build_prompt(chunk_text, similar_clauses)
     try:
         response = _genai_client.models.generate_content(
             model=GEMINI_MODEL,
@@ -305,10 +292,88 @@ def _run_rag_pipeline(text: str) -> dict:
         )
         raw = response.text.strip().removeprefix("```json").removesuffix("```").strip()
         return json.loads(raw)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Analysis failed, please retry")
+    except Exception:
+        return {"clauses": [], "risks": [], "summary": ""}
+
+
+def _merge_results(results: list[dict]) -> dict:
+    # Merge risks — deduplicate by clause name, keep highest risk level
+    risk_map = {}
+    risk_order = {"High": 3, "Medium": 2, "Low": 1}
+    for r in results:
+        for risk in r.get("risks", []):
+            clause = risk.get("clause", "")
+            level = risk.get("risk_level", "Low")
+            if clause not in risk_map or risk_order.get(level, 0) > risk_order.get(risk_map[clause]["risk_level"], 0):
+                risk_map[clause] = risk
+    merged_risks = list(risk_map.values())
+
+    # Merge clauses — if any chunk found a clause, mark it found
+    clause_map = {}
+    for r in results:
+        for clause in r.get("clauses", []):
+            ctype = clause.get("clause_type", "")
+            if ctype not in clause_map or clause.get("found") and not clause_map[ctype].get("found"):
+                clause_map[ctype] = clause
+    merged_clauses = list(clause_map.values())
+
+    # Use the first non-empty summary
+    summary = next(
+        (r["summary"] for r in results if r.get("summary")),
+        "No summary available"
+    )
+
+    return {
+        "summary": summary,
+        "risks": merged_risks,
+        "clauses": merged_clauses,
+    }
+
+
+def _run_rag_pipeline(text: str) -> dict:
+    import time
+    if _vectors is None or not _clauses:
+        raise HTTPException(status_code=503, detail="Service starting up, retry in 30s")
+
+    if not text or not text.strip():
+        raise HTTPException(status_code=400, detail="Contract text is empty")
+
+    t0 = time.time()
+
+    # Step 1 — chunk
+    chunks = _chunk_text(text)
+    print(f"[TIMING] Chunking: {time.time() - t0:.2f}s | {len(chunks)} chunks")
+
+    # Step 2 — embed chunks
+    t1 = time.time()
+    try:
+        chunk_vectors = _embed_chunks(chunks)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Gemini call failed: {exc!s}") from exc
+        raise HTTPException(status_code=502, detail=f"Embedding failed: {exc!s}") from exc
+    print(f"[TIMING] Embedding: {time.time() - t1:.2f}s")
+
+    # Step 3 — retrieve top CUAD/ACORD matches
+    t2 = time.time()
+    similar = _retrieve_top_clauses(chunk_vectors)
+    print(f"[TIMING] RAG similarity search: {time.time() - t2:.2f}s")
+
+    # Step 4 — analyze each chunk in parallel
+    t3 = time.time()
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = [
+            executor.submit(_analyze_single_chunk, chunk, similar)
+            for chunk in chunks
+        ]
+        chunk_results = [f.result() for f in futures]
+    print(f"[TIMING] Gemini calls (parallel): {time.time() - t3:.2f}s | {len(chunks)} chunks")
+
+    # Step 5 — merge
+    t4 = time.time()
+    result = _merge_results(chunk_results)
+    print(f"[TIMING] Merge: {time.time() - t4:.2f}s")
+
+    print(f"[TIMING] Total pipeline: {time.time() - t0:.2f}s")
+    return result
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
