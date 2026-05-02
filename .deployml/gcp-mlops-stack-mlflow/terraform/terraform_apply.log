@@ -1,0 +1,1557 @@
+[0m[1mmodule.model_serving_fastapi[0].data.google_project.current: Reading...[0m[0m
+[0m[1mmodule.model_serving_fastapi[0].data.google_project.current: Read complete after 0s [id=projects/deploy-ml-lab][0m
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+ [36m<=[0m read (data resources)[0m
+
+Terraform will perform the following actions:
+
+[1m  # google_storage_bucket.artifact_tracking_mlflow_artifact[0m will be created
+[0m  [32m+[0m[0m resource "google_storage_bucket" "artifact_tracking_mlflow_artifact" {
+      [32m+[0m[0m effective_labels            = {
+          [32m+[0m[0m "component"                  = "mlflow-artifacts"
+          [32m+[0m[0m "goog-terraform-provisioned" = "true"
+          [32m+[0m[0m "managed-by"                 = "terraform"
+          [32m+[0m[0m "stage"                      = "artifact_tracking"
+        }
+      [32m+[0m[0m force_destroy               = true
+      [32m+[0m[0m id                          = (known after apply)
+      [32m+[0m[0m labels                      = {
+          [32m+[0m[0m "component"  = "mlflow-artifacts"
+          [32m+[0m[0m "managed-by" = "terraform"
+          [32m+[0m[0m "stage"      = "artifact_tracking"
+        }
+      [32m+[0m[0m location                    = "US-WEST1"
+      [32m+[0m[0m name                        = "mlflow-artifacts-deploy-ml-lab"
+      [32m+[0m[0m project                     = (known after apply)
+      [32m+[0m[0m project_number              = (known after apply)
+      [32m+[0m[0m public_access_prevention    = (known after apply)
+      [32m+[0m[0m rpo                         = (known after apply)
+      [32m+[0m[0m self_link                   = (known after apply)
+      [32m+[0m[0m storage_class               = "STANDARD"
+      [32m+[0m[0m terraform_labels            = {
+          [32m+[0m[0m "component"                  = "mlflow-artifacts"
+          [32m+[0m[0m "goog-terraform-provisioned" = "true"
+          [32m+[0m[0m "managed-by"                 = "terraform"
+          [32m+[0m[0m "stage"                      = "artifact_tracking"
+        }
+      [32m+[0m[0m time_created                = (known after apply)
+      [32m+[0m[0m uniform_bucket_level_access = (known after apply)
+      [32m+[0m[0m updated                     = (known after apply)
+      [32m+[0m[0m url                         = (known after apply)
+
+      [32m+[0m[0m soft_delete_policy (known after apply)
+
+      [32m+[0m[0m versioning (known after apply)
+
+      [32m+[0m[0m website (known after apply)
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].data.google_project.current[0m will be read during apply
+  # (depends on a resource or a module with changes pending)
+[0m [36m<=[0m[0m data "google_project" "current" {
+      [32m+[0m[0m auto_create_network = (known after apply)
+      [32m+[0m[0m billing_account     = (known after apply)
+      [32m+[0m[0m deletion_policy     = (known after apply)
+      [32m+[0m[0m effective_labels    = (known after apply)
+      [32m+[0m[0m folder_id           = (known after apply)
+      [32m+[0m[0m id                  = (known after apply)
+      [32m+[0m[0m labels              = (known after apply)
+      [32m+[0m[0m name                = (known after apply)
+      [32m+[0m[0m number              = (known after apply)
+      [32m+[0m[0m org_id              = (known after apply)
+      [32m+[0m[0m tags                = (known after apply)
+      [32m+[0m[0m terraform_labels    = (known after apply)
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["cloudkms.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "cloudkms.googleapis.com"
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["cloudresourcemanager.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "cloudresourcemanager.googleapis.com"
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["compute.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "compute.googleapis.com"
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["iam.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "iam.googleapis.com"
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["logging.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "logging.googleapis.com"
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["monitoring.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "monitoring.googleapis.com"
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["run.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "run.googleapis.com"
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["servicenetworking.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "servicenetworking.googleapis.com"
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["serviceusage.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "serviceusage.googleapis.com"
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["sql-component.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "sql-component.googleapis.com"
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["sqladmin.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "sqladmin.googleapis.com"
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["storage-api.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "storage-api.googleapis.com"
+    }
+
+[1m  # module.artifact_tracking_mlflow[0].google_project_service.required["storage-component.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "storage-component.googleapis.com"
+    }
+
+[1m  # module.bigquery.google_bigquery_dataset.mlops[0m will be created
+[0m  [32m+[0m[0m resource "google_bigquery_dataset" "mlops" {
+      [32m+[0m[0m creation_time              = (known after apply)
+      [32m+[0m[0m dataset_id                 = "mlops"
+      [32m+[0m[0m default_collation          = (known after apply)
+      [32m+[0m[0m delete_contents_on_destroy = false
+      [32m+[0m[0m effective_labels           = {
+          [32m+[0m[0m "goog-terraform-provisioned" = "true"
+        }
+      [32m+[0m[0m etag                       = (known after apply)
+      [32m+[0m[0m id                         = (known after apply)
+      [32m+[0m[0m is_case_insensitive        = (known after apply)
+      [32m+[0m[0m last_modified_time         = (known after apply)
+      [32m+[0m[0m location                   = "us-west1"
+      [32m+[0m[0m max_time_travel_hours      = (known after apply)
+      [32m+[0m[0m project                    = "deploy-ml-lab"
+      [32m+[0m[0m self_link                  = (known after apply)
+      [32m+[0m[0m storage_billing_model      = (known after apply)
+      [32m+[0m[0m terraform_labels           = {
+          [32m+[0m[0m "goog-terraform-provisioned" = "true"
+        }
+
+      [32m+[0m[0m access (known after apply)
+    }
+
+[1m  # module.bigquery.google_bigquery_table.drift_metrics[0m will be created
+[0m  [32m+[0m[0m resource "google_bigquery_table" "drift_metrics" {
+      [32m+[0m[0m creation_time                = (known after apply)
+      [32m+[0m[0m dataset_id                   = "mlops"
+      [32m+[0m[0m deletion_protection          = false
+      [32m+[0m[0m effective_labels             = {
+          [32m+[0m[0m "goog-terraform-provisioned" = "true"
+        }
+      [32m+[0m[0m etag                         = (known after apply)
+      [32m+[0m[0m expiration_time              = (known after apply)
+      [32m+[0m[0m generated_schema_columns     = (known after apply)
+      [32m+[0m[0m id                           = (known after apply)
+      [32m+[0m[0m ignore_auto_generated_schema = false
+      [32m+[0m[0m last_modified_time           = (known after apply)
+      [32m+[0m[0m location                     = (known after apply)
+      [32m+[0m[0m max_staleness                = (known after apply)
+      [32m+[0m[0m num_bytes                    = (known after apply)
+      [32m+[0m[0m num_long_term_bytes          = (known after apply)
+      [32m+[0m[0m num_rows                     = (known after apply)
+      [32m+[0m[0m project                      = "deploy-ml-lab"
+      [32m+[0m[0m schema                       = jsonencode(
+            [
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "REQUIRED"
+                  [32m+[0m[0m name = "metric_timestamp"
+                  [32m+[0m[0m type = "TIMESTAMP"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "REQUIRED"
+                  [32m+[0m[0m name = "metric_type"
+                  [32m+[0m[0m type = "STRING"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "feature_name"
+                  [32m+[0m[0m type = "STRING"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "value"
+                  [32m+[0m[0m type = "FLOAT"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "window_start"
+                  [32m+[0m[0m type = "TIMESTAMP"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "window_end"
+                  [32m+[0m[0m type = "TIMESTAMP"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "model_version"
+                  [32m+[0m[0m type = "STRING"
+                },
+            ]
+        )
+      [32m+[0m[0m self_link                    = (known after apply)
+      [32m+[0m[0m table_id                     = "drift_metrics"
+      [32m+[0m[0m terraform_labels             = {
+          [32m+[0m[0m "goog-terraform-provisioned" = "true"
+        }
+      [32m+[0m[0m type                         = (known after apply)
+    }
+
+[1m  # module.bigquery.google_bigquery_table.ground_truth[0m will be created
+[0m  [32m+[0m[0m resource "google_bigquery_table" "ground_truth" {
+      [32m+[0m[0m creation_time                = (known after apply)
+      [32m+[0m[0m dataset_id                   = "mlops"
+      [32m+[0m[0m deletion_protection          = false
+      [32m+[0m[0m effective_labels             = {
+          [32m+[0m[0m "goog-terraform-provisioned" = "true"
+        }
+      [32m+[0m[0m etag                         = (known after apply)
+      [32m+[0m[0m expiration_time              = (known after apply)
+      [32m+[0m[0m generated_schema_columns     = (known after apply)
+      [32m+[0m[0m id                           = (known after apply)
+      [32m+[0m[0m ignore_auto_generated_schema = false
+      [32m+[0m[0m last_modified_time           = (known after apply)
+      [32m+[0m[0m location                     = (known after apply)
+      [32m+[0m[0m max_staleness                = (known after apply)
+      [32m+[0m[0m num_bytes                    = (known after apply)
+      [32m+[0m[0m num_long_term_bytes          = (known after apply)
+      [32m+[0m[0m num_rows                     = (known after apply)
+      [32m+[0m[0m project                      = "deploy-ml-lab"
+      [32m+[0m[0m schema                       = jsonencode(
+            [
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "REQUIRED"
+                  [32m+[0m[0m name = "entity_id"
+                  [32m+[0m[0m type = "STRING"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "REQUIRED"
+                  [32m+[0m[0m name = "event_timestamp"
+                  [32m+[0m[0m type = "TIMESTAMP"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "actual_value"
+                  [32m+[0m[0m type = "FLOAT"
+                },
+            ]
+        )
+      [32m+[0m[0m self_link                    = (known after apply)
+      [32m+[0m[0m table_id                     = "ground_truth"
+      [32m+[0m[0m terraform_labels             = {
+          [32m+[0m[0m "goog-terraform-provisioned" = "true"
+        }
+      [32m+[0m[0m type                         = (known after apply)
+    }
+
+[1m  # module.bigquery.google_bigquery_table.offline_features[0m will be created
+[0m  [32m+[0m[0m resource "google_bigquery_table" "offline_features" {
+      [32m+[0m[0m creation_time                = (known after apply)
+      [32m+[0m[0m dataset_id                   = "mlops"
+      [32m+[0m[0m deletion_protection          = false
+      [32m+[0m[0m effective_labels             = {
+          [32m+[0m[0m "goog-terraform-provisioned" = "true"
+        }
+      [32m+[0m[0m etag                         = (known after apply)
+      [32m+[0m[0m expiration_time              = (known after apply)
+      [32m+[0m[0m generated_schema_columns     = (known after apply)
+      [32m+[0m[0m id                           = (known after apply)
+      [32m+[0m[0m ignore_auto_generated_schema = false
+      [32m+[0m[0m last_modified_time           = (known after apply)
+      [32m+[0m[0m location                     = (known after apply)
+      [32m+[0m[0m max_staleness                = (known after apply)
+      [32m+[0m[0m num_bytes                    = (known after apply)
+      [32m+[0m[0m num_long_term_bytes          = (known after apply)
+      [32m+[0m[0m num_rows                     = (known after apply)
+      [32m+[0m[0m project                      = "deploy-ml-lab"
+      [32m+[0m[0m schema                       = jsonencode(
+            [
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "REQUIRED"
+                  [32m+[0m[0m name = "entity_id"
+                  [32m+[0m[0m type = "STRING"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "REQUIRED"
+                  [32m+[0m[0m name = "event_timestamp"
+                  [32m+[0m[0m type = "TIMESTAMP"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "bedrooms"
+                  [32m+[0m[0m type = "FLOAT"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "bathrooms"
+                  [32m+[0m[0m type = "FLOAT"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "area_sqft"
+                  [32m+[0m[0m type = "FLOAT"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "lot_size"
+                  [32m+[0m[0m type = "FLOAT"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "year_built"
+                  [32m+[0m[0m type = "FLOAT"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "city"
+                  [32m+[0m[0m type = "FLOAT"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "state"
+                  [32m+[0m[0m type = "FLOAT"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "price"
+                  [32m+[0m[0m type = "FLOAT"
+                },
+            ]
+        )
+      [32m+[0m[0m self_link                    = (known after apply)
+      [32m+[0m[0m table_id                     = "offline_features"
+      [32m+[0m[0m terraform_labels             = {
+          [32m+[0m[0m "goog-terraform-provisioned" = "true"
+        }
+      [32m+[0m[0m type                         = (known after apply)
+    }
+
+[1m  # module.bigquery.google_bigquery_table.predictions[0m will be created
+[0m  [32m+[0m[0m resource "google_bigquery_table" "predictions" {
+      [32m+[0m[0m creation_time                = (known after apply)
+      [32m+[0m[0m dataset_id                   = "mlops"
+      [32m+[0m[0m deletion_protection          = false
+      [32m+[0m[0m effective_labels             = {
+          [32m+[0m[0m "goog-terraform-provisioned" = "true"
+        }
+      [32m+[0m[0m etag                         = (known after apply)
+      [32m+[0m[0m expiration_time              = (known after apply)
+      [32m+[0m[0m generated_schema_columns     = (known after apply)
+      [32m+[0m[0m id                           = (known after apply)
+      [32m+[0m[0m ignore_auto_generated_schema = false
+      [32m+[0m[0m last_modified_time           = (known after apply)
+      [32m+[0m[0m location                     = (known after apply)
+      [32m+[0m[0m max_staleness                = (known after apply)
+      [32m+[0m[0m num_bytes                    = (known after apply)
+      [32m+[0m[0m num_long_term_bytes          = (known after apply)
+      [32m+[0m[0m num_rows                     = (known after apply)
+      [32m+[0m[0m project                      = "deploy-ml-lab"
+      [32m+[0m[0m schema                       = jsonencode(
+            [
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "REQUIRED"
+                  [32m+[0m[0m name = "prediction_id"
+                  [32m+[0m[0m type = "STRING"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "REQUIRED"
+                  [32m+[0m[0m name = "entity_id"
+                  [32m+[0m[0m type = "STRING"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "REQUIRED"
+                  [32m+[0m[0m name = "prediction_timestamp"
+                  [32m+[0m[0m type = "TIMESTAMP"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "predicted_value"
+                  [32m+[0m[0m type = "FLOAT"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "model_version"
+                  [32m+[0m[0m type = "STRING"
+                },
+              [32m+[0m[0m {
+                  [32m+[0m[0m mode = "NULLABLE"
+                  [32m+[0m[0m name = "feature_snapshot_timestamp"
+                  [32m+[0m[0m type = "TIMESTAMP"
+                },
+            ]
+        )
+      [32m+[0m[0m self_link                    = (known after apply)
+      [32m+[0m[0m table_id                     = "predictions"
+      [32m+[0m[0m terraform_labels             = {
+          [32m+[0m[0m "goog-terraform-provisioned" = "true"
+        }
+      [32m+[0m[0m type                         = (known after apply)
+    }
+
+[1m  # module.cloud_sql_postgres.google_project_service.required["cloudkms.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "cloudkms.googleapis.com"
+    }
+
+[1m  # module.cloud_sql_postgres.google_project_service.required["cloudresourcemanager.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "cloudresourcemanager.googleapis.com"
+    }
+
+[1m  # module.cloud_sql_postgres.google_project_service.required["compute.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "compute.googleapis.com"
+    }
+
+[1m  # module.cloud_sql_postgres.google_project_service.required["logging.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "logging.googleapis.com"
+    }
+
+[1m  # module.cloud_sql_postgres.google_project_service.required["monitoring.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "monitoring.googleapis.com"
+    }
+
+[1m  # module.cloud_sql_postgres.google_project_service.required["servicenetworking.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "servicenetworking.googleapis.com"
+    }
+
+[1m  # module.cloud_sql_postgres.google_project_service.required["serviceusage.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "serviceusage.googleapis.com"
+    }
+
+[1m  # module.cloud_sql_postgres.google_project_service.required["sql-component.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "sql-component.googleapis.com"
+    }
+
+[1m  # module.cloud_sql_postgres.google_project_service.required["sqladmin.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "sqladmin.googleapis.com"
+    }
+
+[1m  # module.cloud_sql_postgres.google_project_service.required["storage-api.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "storage-api.googleapis.com"
+    }
+
+[1m  # module.cloud_sql_postgres.google_project_service.required["storage-component.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "storage-component.googleapis.com"
+    }
+
+[1m  # module.cloud_sql_postgres.google_sql_database.db[0m will be created
+[0m  [32m+[0m[0m resource "google_sql_database" "db" {
+      [32m+[0m[0m charset         = (known after apply)
+      [32m+[0m[0m collation       = (known after apply)
+      [32m+[0m[0m deletion_policy = "DELETE"
+      [32m+[0m[0m id              = (known after apply)
+      [32m+[0m[0m instance        = "mlflow-postgres-deploy-ml-lab"
+      [32m+[0m[0m name            = "mlflow"
+      [32m+[0m[0m project         = "deploy-ml-lab"
+      [32m+[0m[0m self_link       = (known after apply)
+    }
+
+[1m  # module.cloud_sql_postgres.google_sql_database.metrics_db[0][0m will be created
+[0m  [32m+[0m[0m resource "google_sql_database" "metrics_db" {
+      [32m+[0m[0m charset         = (known after apply)
+      [32m+[0m[0m collation       = (known after apply)
+      [32m+[0m[0m deletion_policy = "DELETE"
+      [32m+[0m[0m id              = (known after apply)
+      [32m+[0m[0m instance        = "mlflow-postgres-deploy-ml-lab"
+      [32m+[0m[0m name            = "metrics"
+      [32m+[0m[0m project         = "deploy-ml-lab"
+      [32m+[0m[0m self_link       = (known after apply)
+    }
+
+[1m  # module.cloud_sql_postgres.google_sql_database_instance.postgres[0m will be created
+[0m  [32m+[0m[0m resource "google_sql_database_instance" "postgres" {
+      [32m+[0m[0m available_maintenance_versions = (known after apply)
+      [32m+[0m[0m connection_name                = (known after apply)
+      [32m+[0m[0m database_version               = "POSTGRES_14"
+      [32m+[0m[0m deletion_protection            = false
+      [32m+[0m[0m dns_name                       = (known after apply)
+      [32m+[0m[0m dns_names                      = (known after apply)
+      [32m+[0m[0m encryption_key_name            = (known after apply)
+      [32m+[0m[0m first_ip_address               = (known after apply)
+      [32m+[0m[0m id                             = (known after apply)
+      [32m+[0m[0m instance_type                  = (known after apply)
+      [32m+[0m[0m ip_address                     = (known after apply)
+      [32m+[0m[0m maintenance_version            = (known after apply)
+      [32m+[0m[0m master_instance_name           = (known after apply)
+      [32m+[0m[0m name                           = "mlflow-postgres-deploy-ml-lab"
+      [32m+[0m[0m node_count                     = (known after apply)
+      [32m+[0m[0m private_ip_address             = (known after apply)
+      [32m+[0m[0m project                        = "deploy-ml-lab"
+      [32m+[0m[0m psc_service_attachment_link    = (known after apply)
+      [32m+[0m[0m public_ip_address              = (known after apply)
+      [32m+[0m[0m region                         = "us-west1"
+      [32m+[0m[0m replica_names                  = (known after apply)
+      [32m+[0m[0m root_password_wo               = (write-only attribute)
+      [32m+[0m[0m self_link                      = (known after apply)
+      [32m+[0m[0m server_ca_cert                 = (sensitive value)
+      [32m+[0m[0m service_account_email_address  = (known after apply)
+
+      [32m+[0m[0m replica_configuration (known after apply)
+
+      [32m+[0m[0m replication_cluster (known after apply)
+
+      [32m+[0m[0m settings {
+          [32m+[0m[0m activation_policy           = "ALWAYS"
+          [32m+[0m[0m availability_type           = "ZONAL"
+          [32m+[0m[0m connector_enforcement       = (known after apply)
+          [32m+[0m[0m data_api_access             = (known after apply)
+          [32m+[0m[0m disk_autoresize             = true
+          [32m+[0m[0m disk_autoresize_limit       = 0
+          [32m+[0m[0m disk_size                   = (known after apply)
+          [32m+[0m[0m disk_type                   = (known after apply)
+          [32m+[0m[0m edition                     = (known after apply)
+          [32m+[0m[0m effective_availability_type = (known after apply)
+          [32m+[0m[0m pricing_plan                = "PER_USE"
+          [32m+[0m[0m tier                        = "db-g1-small"
+          [32m+[0m[0m user_labels                 = (known after apply)
+          [32m+[0m[0m version                     = (known after apply)
+
+          [32m+[0m[0m backup_configuration (known after apply)
+
+          [32m+[0m[0m connection_pool_config (known after apply)
+
+          [32m+[0m[0m data_cache_config (known after apply)
+
+          [32m+[0m[0m database_flags {
+              [32m+[0m[0m name  = "max_connections"
+              [32m+[0m[0m value = "100"
+            }
+
+          [32m+[0m[0m insights_config (known after apply)
+
+          [32m+[0m[0m ip_configuration {
+              [32m+[0m[0m ipv4_enabled   = true
+              [32m+[0m[0m server_ca_mode = (known after apply)
+              [32m+[0m[0m ssl_mode       = (known after apply)
+
+              [32m+[0m[0m authorized_networks {
+                    name            = [90mnull[0m[0m
+                  [32m+[0m[0m value           = "0.0.0.0/0"
+                    [90m# (1 unchanged attribute hidden)[0m[0m
+                }
+            }
+
+          [32m+[0m[0m location_preference (known after apply)
+
+          [32m+[0m[0m read_pool_auto_scale_config (known after apply)
+        }
+    }
+
+[1m  # module.cloud_sql_postgres.google_sql_user.users[0m will be created
+[0m  [32m+[0m[0m resource "google_sql_user" "users" {
+      [32m+[0m[0m host                    = (known after apply)
+      [32m+[0m[0m iam_email               = (known after apply)
+      [32m+[0m[0m id                      = (known after apply)
+      [32m+[0m[0m instance                = "mlflow-postgres-deploy-ml-lab"
+      [32m+[0m[0m name                    = "mlflow"
+      [32m+[0m[0m password                = (sensitive value)
+      [32m+[0m[0m password_wo             = (write-only attribute)
+      [32m+[0m[0m project                 = "deploy-ml-lab"
+      [32m+[0m[0m sql_server_user_details = (known after apply)
+    }
+
+[1m  # module.cloud_sql_postgres.null_resource.verify_instance_running[0m will be created
+[0m  [32m+[0m[0m resource "null_resource" "verify_instance_running" {
+      [32m+[0m[0m id       = (known after apply)
+      [32m+[0m[0m triggers = {
+          [32m+[0m[0m "instance_id"   = (known after apply)
+          [32m+[0m[0m "instance_name" = "mlflow-postgres-deploy-ml-lab"
+        }
+    }
+
+[1m  # module.cloud_sql_postgres.random_password.db_password[0m will be created
+[0m  [32m+[0m[0m resource "random_password" "db_password" {
+      [32m+[0m[0m bcrypt_hash      = (sensitive value)
+      [32m+[0m[0m id               = (known after apply)
+      [32m+[0m[0m length           = 16
+      [32m+[0m[0m lower            = true
+      [32m+[0m[0m min_lower        = 0
+      [32m+[0m[0m min_numeric      = 0
+      [32m+[0m[0m min_special      = 0
+      [32m+[0m[0m min_upper        = 0
+      [32m+[0m[0m number           = true
+      [32m+[0m[0m numeric          = true
+      [32m+[0m[0m override_special = "!*-_."
+      [32m+[0m[0m result           = (sensitive value)
+      [32m+[0m[0m special          = true
+      [32m+[0m[0m upper            = true
+    }
+
+[1m  # module.cloud_sql_postgres.time_sleep.wait_for_instance[0m will be created
+[0m  [32m+[0m[0m resource "time_sleep" "wait_for_instance" {
+      [32m+[0m[0m create_duration = "180s"
+      [32m+[0m[0m id              = (known after apply)
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].data.google_project.current[0m will be read during apply
+  # (depends on a resource or a module with changes pending)
+[0m [36m<=[0m[0m data "google_project" "current" {
+      [32m+[0m[0m auto_create_network = (known after apply)
+      [32m+[0m[0m billing_account     = (known after apply)
+      [32m+[0m[0m deletion_policy     = (known after apply)
+      [32m+[0m[0m effective_labels    = (known after apply)
+      [32m+[0m[0m folder_id           = (known after apply)
+      [32m+[0m[0m id                  = (known after apply)
+      [32m+[0m[0m labels              = (known after apply)
+      [32m+[0m[0m name                = (known after apply)
+      [32m+[0m[0m number              = (known after apply)
+      [32m+[0m[0m org_id              = (known after apply)
+      [32m+[0m[0m tags                = (known after apply)
+      [32m+[0m[0m terraform_labels    = (known after apply)
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_cloud_run_service.mlflow[0][0m will be created
+[0m  [32m+[0m[0m resource "google_cloud_run_service" "mlflow" {
+      [32m+[0m[0m autogenerate_revision_name = true
+      [32m+[0m[0m id                         = (known after apply)
+      [32m+[0m[0m location                   = "us-west1"
+      [32m+[0m[0m name                       = "mlflow-server"
+      [32m+[0m[0m project                    = "deploy-ml-lab"
+      [32m+[0m[0m status                     = (known after apply)
+
+      [32m+[0m[0m metadata (known after apply)
+
+      [32m+[0m[0m template {
+          [32m+[0m[0m metadata {
+              [32m+[0m[0m annotations      = (known after apply)
+              [32m+[0m[0m generation       = (known after apply)
+              [32m+[0m[0m labels           = (known after apply)
+              [32m+[0m[0m name             = (known after apply)
+              [32m+[0m[0m namespace        = (known after apply)
+              [32m+[0m[0m resource_version = (known after apply)
+              [32m+[0m[0m self_link        = (known after apply)
+              [32m+[0m[0m uid              = (known after apply)
+            }
+          [32m+[0m[0m spec {
+              [32m+[0m[0m container_concurrency = 80
+              [32m+[0m[0m service_account_name  = (known after apply)
+              [32m+[0m[0m serving_state         = (known after apply)
+              [32m+[0m[0m timeout_seconds       = 300
+
+              [32m+[0m[0m containers {
+                  [32m+[0m[0m image = "us-west1-docker.pkg.dev/deploy-ml-lab/mlops-images/mlflow:latest"
+                  [32m+[0m[0m name  = (known after apply)
+
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+
+                  [32m+[0m[0m ports {
+                      [32m+[0m[0m container_port = 8080
+                      [32m+[0m[0m name           = (known after apply)
+                    }
+
+                  [32m+[0m[0m resources {
+                      [32m+[0m[0m limits   = {
+                          [32m+[0m[0m "cpu"    = "2000m"
+                          [32m+[0m[0m "memory" = "2Gi"
+                        }
+                      [32m+[0m[0m requests = {
+                          [32m+[0m[0m "cpu"    = "1000m"
+                          [32m+[0m[0m "memory" = "1Gi"
+                        }
+                    }
+
+                  [32m+[0m[0m startup_probe (known after apply)
+                }
+            }
+        }
+
+      [32m+[0m[0m traffic {
+          [32m+[0m[0m latest_revision = true
+          [32m+[0m[0m percent         = 100
+          [32m+[0m[0m url             = (known after apply)
+        }
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_cloud_run_service_iam_member.public[0][0m will be created
+[0m  [32m+[0m[0m resource "google_cloud_run_service_iam_member" "public" {
+      [32m+[0m[0m etag     = (known after apply)
+      [32m+[0m[0m id       = (known after apply)
+      [32m+[0m[0m location = "us-west1"
+      [32m+[0m[0m member   = "allUsers"
+      [32m+[0m[0m project  = "deploy-ml-lab"
+      [32m+[0m[0m role     = "roles/run.invoker"
+      [32m+[0m[0m service  = "mlflow-server"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["cloudkms.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "cloudkms.googleapis.com"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["cloudresourcemanager.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "cloudresourcemanager.googleapis.com"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["compute.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "compute.googleapis.com"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["iam.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "iam.googleapis.com"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["logging.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "logging.googleapis.com"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["monitoring.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "monitoring.googleapis.com"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["run.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "run.googleapis.com"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["servicenetworking.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "servicenetworking.googleapis.com"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["serviceusage.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "serviceusage.googleapis.com"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["sql-component.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "sql-component.googleapis.com"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["sqladmin.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "sqladmin.googleapis.com"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["storage-api.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "storage-api.googleapis.com"
+    }
+
+[1m  # module.experiment_tracking_mlflow[0].google_project_service.required["storage-component.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "storage-component.googleapis.com"
+    }
+
+[1m  # module.model_monitoring_grafana[0].data.google_project.current[0m will be read during apply
+  # (depends on a resource or a module with changes pending)
+[0m [36m<=[0m[0m data "google_project" "current" {
+      [32m+[0m[0m auto_create_network = (known after apply)
+      [32m+[0m[0m billing_account     = (known after apply)
+      [32m+[0m[0m deletion_policy     = (known after apply)
+      [32m+[0m[0m effective_labels    = (known after apply)
+      [32m+[0m[0m folder_id           = (known after apply)
+      [32m+[0m[0m id                  = (known after apply)
+      [32m+[0m[0m labels              = (known after apply)
+      [32m+[0m[0m name                = (known after apply)
+      [32m+[0m[0m number              = (known after apply)
+      [32m+[0m[0m org_id              = (known after apply)
+      [32m+[0m[0m tags                = (known after apply)
+      [32m+[0m[0m terraform_labels    = (known after apply)
+    }
+
+[1m  # module.model_monitoring_grafana[0].google_cloud_run_service.grafana[0m will be created
+[0m  [32m+[0m[0m resource "google_cloud_run_service" "grafana" {
+      [32m+[0m[0m autogenerate_revision_name = false
+      [32m+[0m[0m id                         = (known after apply)
+      [32m+[0m[0m location                   = "us-west1"
+      [32m+[0m[0m name                       = "grafana-server"
+      [32m+[0m[0m project                    = "deploy-ml-lab"
+      [32m+[0m[0m status                     = (known after apply)
+
+      [32m+[0m[0m metadata (known after apply)
+
+      [32m+[0m[0m template {
+          [32m+[0m[0m metadata {
+              [32m+[0m[0m annotations      = (known after apply)
+              [32m+[0m[0m generation       = (known after apply)
+              [32m+[0m[0m labels           = (known after apply)
+              [32m+[0m[0m name             = (known after apply)
+              [32m+[0m[0m namespace        = (known after apply)
+              [32m+[0m[0m resource_version = (known after apply)
+              [32m+[0m[0m self_link        = (known after apply)
+              [32m+[0m[0m uid              = (known after apply)
+            }
+          [32m+[0m[0m spec {
+              [32m+[0m[0m container_concurrency = (known after apply)
+              [32m+[0m[0m service_account_name  = (known after apply)
+              [32m+[0m[0m serving_state         = (known after apply)
+              [32m+[0m[0m timeout_seconds       = (known after apply)
+
+              [32m+[0m[0m containers {
+                  [32m+[0m[0m image = "us-west1-docker.pkg.dev/deploy-ml-lab/mlops-images/grafana-container:latest"
+                  [32m+[0m[0m name  = (known after apply)
+
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+
+                  [32m+[0m[0m ports {
+                      [32m+[0m[0m container_port = 8080
+                      [32m+[0m[0m name           = (known after apply)
+                    }
+
+                  [32m+[0m[0m resources {
+                      [32m+[0m[0m limits = {
+                          [32m+[0m[0m "cpu"    = "2000m"
+                          [32m+[0m[0m "memory" = "2Gi"
+                        }
+                    }
+
+                  [32m+[0m[0m startup_probe (known after apply)
+                }
+            }
+        }
+
+      [32m+[0m[0m traffic {
+          [32m+[0m[0m latest_revision = true
+          [32m+[0m[0m percent         = 100
+          [32m+[0m[0m url             = (known after apply)
+        }
+    }
+
+[1m  # module.model_monitoring_grafana[0].google_cloud_run_service_iam_member.public[0][0m will be created
+[0m  [32m+[0m[0m resource "google_cloud_run_service_iam_member" "public" {
+      [32m+[0m[0m etag     = (known after apply)
+      [32m+[0m[0m id       = (known after apply)
+      [32m+[0m[0m location = "us-west1"
+      [32m+[0m[0m member   = "allUsers"
+      [32m+[0m[0m project  = "deploy-ml-lab"
+      [32m+[0m[0m role     = "roles/run.invoker"
+      [32m+[0m[0m service  = "grafana-server"
+    }
+
+[1m  # module.model_monitoring_grafana[0].google_project_iam_member.grafana_cloudsql_client[0m will be created
+[0m  [32m+[0m[0m resource "google_project_iam_member" "grafana_cloudsql_client" {
+      [32m+[0m[0m etag    = (known after apply)
+      [32m+[0m[0m id      = (known after apply)
+      [32m+[0m[0m member  = (known after apply)
+      [32m+[0m[0m project = "deploy-ml-lab"
+      [32m+[0m[0m role    = "roles/cloudsql.client"
+    }
+
+[1m  # module.model_registry_mlflow[0].data.google_project.current[0m will be read during apply
+  # (depends on a resource or a module with changes pending)
+[0m [36m<=[0m[0m data "google_project" "current" {
+      [32m+[0m[0m auto_create_network = (known after apply)
+      [32m+[0m[0m billing_account     = (known after apply)
+      [32m+[0m[0m deletion_policy     = (known after apply)
+      [32m+[0m[0m effective_labels    = (known after apply)
+      [32m+[0m[0m folder_id           = (known after apply)
+      [32m+[0m[0m id                  = (known after apply)
+      [32m+[0m[0m labels              = (known after apply)
+      [32m+[0m[0m name                = (known after apply)
+      [32m+[0m[0m number              = (known after apply)
+      [32m+[0m[0m org_id              = (known after apply)
+      [32m+[0m[0m tags                = (known after apply)
+      [32m+[0m[0m terraform_labels    = (known after apply)
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["cloudkms.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "cloudkms.googleapis.com"
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["cloudresourcemanager.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "cloudresourcemanager.googleapis.com"
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["compute.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "compute.googleapis.com"
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["iam.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "iam.googleapis.com"
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["logging.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "logging.googleapis.com"
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["monitoring.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "monitoring.googleapis.com"
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["run.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "run.googleapis.com"
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["servicenetworking.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "servicenetworking.googleapis.com"
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["serviceusage.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "serviceusage.googleapis.com"
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["sql-component.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "sql-component.googleapis.com"
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["sqladmin.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "sqladmin.googleapis.com"
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["storage-api.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "storage-api.googleapis.com"
+    }
+
+[1m  # module.model_registry_mlflow[0].google_project_service.required["storage-component.googleapis.com"][0m will be created
+[0m  [32m+[0m[0m resource "google_project_service" "required" {
+      [32m+[0m[0m disable_on_destroy = false
+      [32m+[0m[0m id                 = (known after apply)
+      [32m+[0m[0m project            = "deploy-ml-lab"
+      [32m+[0m[0m service            = "storage-component.googleapis.com"
+    }
+
+[1m  # module.model_serving_fastapi[0].google_cloud_run_service.fastapi[0m will be created
+[0m  [32m+[0m[0m resource "google_cloud_run_service" "fastapi" {
+      [32m+[0m[0m autogenerate_revision_name = false
+      [32m+[0m[0m id                         = (known after apply)
+      [32m+[0m[0m location                   = "us-west1"
+      [32m+[0m[0m name                       = "fastapi-mlflow-server"
+      [32m+[0m[0m project                    = "deploy-ml-lab"
+      [32m+[0m[0m status                     = (known after apply)
+
+      [32m+[0m[0m metadata (known after apply)
+
+      [32m+[0m[0m template {
+          [32m+[0m[0m metadata {
+              [32m+[0m[0m annotations      = (known after apply)
+              [32m+[0m[0m generation       = (known after apply)
+              [32m+[0m[0m labels           = (known after apply)
+              [32m+[0m[0m name             = (known after apply)
+              [32m+[0m[0m namespace        = (known after apply)
+              [32m+[0m[0m resource_version = (known after apply)
+              [32m+[0m[0m self_link        = (known after apply)
+              [32m+[0m[0m uid              = (known after apply)
+            }
+          [32m+[0m[0m spec {
+              [32m+[0m[0m container_concurrency = (known after apply)
+              [32m+[0m[0m service_account_name  = "626687515067-compute@developer.gserviceaccount.com"
+              [32m+[0m[0m serving_state         = (known after apply)
+              [32m+[0m[0m timeout_seconds       = (known after apply)
+
+              [32m+[0m[0m containers {
+                  [32m+[0m[0m image = "us-west1-docker.pkg.dev/deploy-ml-lab/mlops-images/fastapi:latest"
+                  [32m+[0m[0m name  = (known after apply)
+
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+                  [32m+[0m[0m env {
+                      # At least one attribute in this block is (or was) sensitive,
+                      # so its contents will not be displayed.
+                    }
+
+                  [32m+[0m[0m liveness_probe {
+                      [32m+[0m[0m failure_threshold     = 3
+                      [32m+[0m[0m initial_delay_seconds = 30
+                      [32m+[0m[0m period_seconds        = 30
+                      [32m+[0m[0m timeout_seconds       = 10
+
+                      [32m+[0m[0m http_get {
+                          [32m+[0m[0m path = "/health"
+                          [32m+[0m[0m port = 8080
+                        }
+                    }
+
+                  [32m+[0m[0m ports {
+                      [32m+[0m[0m container_port = 8080
+                      [32m+[0m[0m name           = (known after apply)
+                    }
+
+                  [32m+[0m[0m resources {
+                      [32m+[0m[0m limits = {
+                          [32m+[0m[0m "cpu"    = "2000m"
+                          [32m+[0m[0m "memory" = "2Gi"
+                        }
+                    }
+
+                  [32m+[0m[0m startup_probe {
+                      [32m+[0m[0m failure_threshold     = 10
+                      [32m+[0m[0m initial_delay_seconds = 10
+                      [32m+[0m[0m period_seconds        = 10
+                      [32m+[0m[0m timeout_seconds       = 10
+
+                      [32m+[0m[0m http_get {
+                          [32m+[0m[0m path = "/health"
+                          [32m+[0m[0m port = 8080
+                        }
+                    }
+                }
+            }
+        }
+
+      [32m+[0m[0m traffic {
+          [32m+[0m[0m latest_revision = true
+          [32m+[0m[0m percent         = 100
+          [32m+[0m[0m url             = (known after apply)
+        }
+    }
+
+[1m  # module.model_serving_fastapi[0].google_cloud_run_service_iam_member.public[0][0m will be created
+[0m  [32m+[0m[0m resource "google_cloud_run_service_iam_member" "public" {
+      [32m+[0m[0m etag     = (known after apply)
+      [32m+[0m[0m id       = (known after apply)
+      [32m+[0m[0m location = "us-west1"
+      [32m+[0m[0m member   = "allUsers"
+      [32m+[0m[0m project  = "deploy-ml-lab"
+      [32m+[0m[0m role     = "roles/run.invoker"
+      [32m+[0m[0m service  = "fastapi-mlflow-server"
+    }
+
+[1m  # module.model_serving_fastapi[0].google_project_iam_member.fastapi_bigquery_user[0m will be created
+[0m  [32m+[0m[0m resource "google_project_iam_member" "fastapi_bigquery_user" {
+      [32m+[0m[0m etag    = (known after apply)
+      [32m+[0m[0m id      = (known after apply)
+      [32m+[0m[0m member  = "serviceAccount:626687515067-compute@developer.gserviceaccount.com"
+      [32m+[0m[0m project = "deploy-ml-lab"
+      [32m+[0m[0m role    = "roles/bigquery.dataEditor"
+    }
+
+[1m  # module.model_serving_fastapi[0].google_project_iam_member.fastapi_cloudsql_client[0m will be created
+[0m  [32m+[0m[0m resource "google_project_iam_member" "fastapi_cloudsql_client" {
+      [32m+[0m[0m etag    = (known after apply)
+      [32m+[0m[0m id      = (known after apply)
+      [32m+[0m[0m member  = "serviceAccount:626687515067-compute@developer.gserviceaccount.com"
+      [32m+[0m[0m project = "deploy-ml-lab"
+      [32m+[0m[0m role    = "roles/cloudsql.client"
+    }
+
+[1m  # module.model_serving_fastapi[0].google_project_iam_member.fastapi_storage_object_admin[0m will be created
+[0m  [32m+[0m[0m resource "google_project_iam_member" "fastapi_storage_object_admin" {
+      [32m+[0m[0m etag    = (known after apply)
+      [32m+[0m[0m id      = (known after apply)
+      [32m+[0m[0m member  = "serviceAccount:626687515067-compute@developer.gserviceaccount.com"
+      [32m+[0m[0m project = "deploy-ml-lab"
+      [32m+[0m[0m role    = "roles/storage.objectAdmin"
+    }
+
+[1m  # module.model_serving_fastapi[0].google_project_iam_member.fastapi_storage_object_viewer[0m will be created
+[0m  [32m+[0m[0m resource "google_project_iam_member" "fastapi_storage_object_viewer" {
+      [32m+[0m[0m etag    = (known after apply)
+      [32m+[0m[0m id      = (known after apply)
+      [32m+[0m[0m member  = "serviceAccount:626687515067-compute@developer.gserviceaccount.com"
+      [32m+[0m[0m project = "deploy-ml-lab"
+      [32m+[0m[0m role    = "roles/storage.objectViewer"
+    }
+
+[1mPlan:[0m [0m74 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  [32m+[0m[0m artifact_bucket        = "mlflow-artifacts-deploy-ml-lab"
+  [32m+[0m[0m bigquery_dataset       = "mlops"
+  [32m+[0m[0m fastapi_url            = (known after apply)
+  [32m+[0m[0m grafana_url            = (known after apply)
+  [32m+[0m[0m mlflow_url             = (known after apply)
+  [32m+[0m[0m postgresql_credentials = (sensitive value)
+[0m[1mmodule.cloud_sql_postgres.random_password.db_password: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.random_password.db_password: Creation complete after 0s [id=none][0m
+[0m[1mmodule.model_serving_fastapi[0].google_project_iam_member.fastapi_bigquery_user: Creating...[0m[0m
+[0m[1mmodule.model_serving_fastapi[0].google_project_iam_member.fastapi_cloudsql_client: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["serviceusage.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["servicenetworking.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_serving_fastapi[0].google_project_iam_member.fastapi_storage_object_viewer: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["sqladmin.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_serving_fastapi[0].google_project_iam_member.fastapi_storage_object_admin: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["cloudkms.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.bigquery.google_bigquery_dataset.mlops: Creating...[0m[0m
+[0m[1mgoogle_storage_bucket.artifact_tracking_mlflow_artifact: Creating...[0m[0m
+[0m[1mmodule.bigquery.google_bigquery_dataset.mlops: Creation complete after 1s [id=projects/deploy-ml-lab/datasets/mlops][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["storage-component.googleapis.com"]: Creating...[0m[0m
+[0m[1mgoogle_storage_bucket.artifact_tracking_mlflow_artifact: Creation complete after 1s [id=mlflow-artifacts-deploy-ml-lab][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["cloudresourcemanager.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["serviceusage.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/serviceusage.googleapis.com][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["cloudkms.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/cloudkms.googleapis.com][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["servicenetworking.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/servicenetworking.googleapis.com][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["cloudresourcemanager.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/cloudresourcemanager.googleapis.com][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["sqladmin.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/sqladmin.googleapis.com][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["storage-api.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["storage-component.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/storage-component.googleapis.com][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["compute.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["sql-component.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["monitoring.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["logging.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.bigquery.google_bigquery_table.offline_features: Creating...[0m[0m
+[0m[1mmodule.bigquery.google_bigquery_table.offline_features: Creation complete after 0s [id=projects/deploy-ml-lab/datasets/mlops/tables/offline_features][0m
+[0m[1mmodule.bigquery.google_bigquery_table.predictions: Creating...[0m[0m
+[0m[1mmodule.bigquery.google_bigquery_table.predictions: Creation complete after 1s [id=projects/deploy-ml-lab/datasets/mlops/tables/predictions][0m
+[0m[1mmodule.bigquery.google_bigquery_table.ground_truth: Creating...[0m[0m
+[0m[1mmodule.bigquery.google_bigquery_table.ground_truth: Creation complete after 0s [id=projects/deploy-ml-lab/datasets/mlops/tables/ground_truth][0m
+[0m[1mmodule.bigquery.google_bigquery_table.drift_metrics: Creating...[0m[0m
+[0m[1mmodule.bigquery.google_bigquery_table.drift_metrics: Creation complete after 1s [id=projects/deploy-ml-lab/datasets/mlops/tables/drift_metrics][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["compute.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/compute.googleapis.com][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["logging.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/logging.googleapis.com][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["storage-api.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/storage-api.googleapis.com][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["monitoring.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/monitoring.googleapis.com][0m
+[0m[1mmodule.cloud_sql_postgres.google_project_service.required["sql-component.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/sql-component.googleapis.com][0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Creating...[0m[0m
+[0m[1mmodule.model_serving_fastapi[0].google_project_iam_member.fastapi_storage_object_admin: Creation complete after 8s [id=deploy-ml-lab/roles/storage.objectAdmin/serviceAccount:626687515067-compute@developer.gserviceaccount.com][0m
+[0m[1mmodule.model_serving_fastapi[0].google_project_iam_member.fastapi_cloudsql_client: Creation complete after 8s [id=deploy-ml-lab/roles/cloudsql.client/serviceAccount:626687515067-compute@developer.gserviceaccount.com][0m
+[0m[1mmodule.model_serving_fastapi[0].google_project_iam_member.fastapi_storage_object_viewer: Creation complete after 8s [id=deploy-ml-lab/roles/storage.objectViewer/serviceAccount:626687515067-compute@developer.gserviceaccount.com][0m
+[0m[1mmodule.model_serving_fastapi[0].google_project_iam_member.fastapi_bigquery_user: Creation complete after 9s [id=deploy-ml-lab/roles/bigquery.dataEditor/serviceAccount:626687515067-compute@developer.gserviceaccount.com][0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [00m10s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [00m20s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [00m30s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [00m40s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [00m50s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [01m00s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [01m10s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [01m20s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [01m30s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [01m40s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [01m50s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [02m00s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [02m10s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [02m20s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [02m30s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [02m40s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [02m50s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [03m00s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [03m10s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [03m20s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [03m30s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [03m40s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [03m50s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [04m00s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [04m10s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [04m20s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [04m30s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [04m40s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [04m50s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [05m00s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [05m10s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [05m20s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [05m30s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [05m40s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [05m50s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [06m00s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [06m10s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [06m20s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [06m30s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [06m40s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [06m50s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [07m00s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [07m10s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [07m20s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [07m30s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [07m40s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [07m50s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [08m00s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [08m10s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [08m20s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Still creating... [08m30s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database_instance.postgres: Creation complete after 8m40s [id=mlflow-postgres-deploy-ml-lab][0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [00m10s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [00m20s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [00m30s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [00m46s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [00m56s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [01m06s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [01m16s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [01m26s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [01m36s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [01m46s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [01m56s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [02m06s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [02m16s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [02m26s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [02m36s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [02m46s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Still creating... [02m56s elapsed][0m[0m
+[0m[1mmodule.cloud_sql_postgres.time_sleep.wait_for_instance: Creation complete after 3m6s [id=2026-05-01T17:58:09Z][0m
+[0m[1mmodule.cloud_sql_postgres.null_resource.verify_instance_running: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.null_resource.verify_instance_running: Provisioning with 'local-exec'...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.null_resource.verify_instance_running (local-exec):[0m [0mExecuting: ["/bin/sh" "-c" "set +e\necho \"Checking Cloud SQL instance status...\"\nif ! command -v gcloud &> /dev/null; then\n  echo \"gcloud CLI not found, skipping status check (relying on time_sleep)\"\n  exit 0\nfi\n      \nfor i in {1..30}; do\n  STATE=$(gcloud sql instances describe mlflow-postgres-deploy-ml-lab --project=deploy-ml-lab --format=\"value(state)\" 2>/dev/null || echo \"NOT_FOUND\")\n  if [ \"$STATE\" = \"RUNNABLE\" ]; then\n    echo \"✓ Instance is RUNNABLE, proceeding...\"\n    exit 0\n  elif [ \"$STATE\" = \"STOPPED\" ] || [ \"$STATE\" = \"SUSPENDED\" ]; then\n    echo \"⚠ Instance is $STATE. Attempting to start...\"\n    gcloud sql instances patch mlflow-postgres-deploy-ml-lab --project=deploy-ml-lab --activation-policy=ALWAYS 2>/dev/null || true\n    sleep 30\n  elif [ \"$STATE\" = \"NOT_FOUND\" ]; then\n    echo \"Instance not found yet, waiting... (attempt $i/30)\"\n    sleep 10\n  else\n    echo \"Instance state: $STATE (attempt $i/30)\"\n    sleep 10\n  fi\ndone\necho \"⚠ Warning: Could not verify instance is RUNNABLE, but proceeding...\"\nexit 0  # Don't fail the entire deployment if this check fails\n"]
+[0m[1mmodule.cloud_sql_postgres.null_resource.verify_instance_running (local-exec):[0m [0mChecking Cloud SQL instance status...
+[0m[1mmodule.cloud_sql_postgres.null_resource.verify_instance_running (local-exec):[0m [0m✓ Instance is RUNNABLE, proceeding...
+[0m[1mmodule.cloud_sql_postgres.null_resource.verify_instance_running: Creation complete after 1s [id=8859060010727603423][0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_user.users: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database.db: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database.metrics_db[0]: Creating...[0m[0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_user.users: Creation complete after 0s [id=mlflow//mlflow-postgres-deploy-ml-lab][0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database.db: Creation complete after 1s [id=projects/deploy-ml-lab/instances/mlflow-postgres-deploy-ml-lab/databases/mlflow][0m
+[0m[1mmodule.cloud_sql_postgres.google_sql_database.metrics_db[0]: Creation complete after 2s [id=projects/deploy-ml-lab/instances/mlflow-postgres-deploy-ml-lab/databases/metrics][0m
+[0m[1mmodule.model_registry_mlflow[0].data.google_project.current: Reading...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].data.google_project.current: Reading...[0m[0m
+[0m[1mmodule.model_monitoring_grafana[0].data.google_project.current: Reading...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].data.google_project.current: Reading...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["logging.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["monitoring.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["compute.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["servicenetworking.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["sql-component.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["iam.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].data.google_project.current: Read complete after 1s [id=projects/deploy-ml-lab][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["cloudresourcemanager.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].data.google_project.current: Read complete after 1s [id=projects/deploy-ml-lab][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].data.google_project.current: Read complete after 1s [id=projects/deploy-ml-lab][0m
+[0m[1mmodule.model_monitoring_grafana[0].data.google_project.current: Read complete after 1s [id=projects/deploy-ml-lab][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["storage-api.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["serviceusage.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["storage-component.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["sql-component.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/sql-component.googleapis.com][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["serviceusage.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/serviceusage.googleapis.com][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["compute.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/compute.googleapis.com][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["cloudkms.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["monitoring.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/monitoring.googleapis.com][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["run.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["logging.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/logging.googleapis.com][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["servicenetworking.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/servicenetworking.googleapis.com][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["iam.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/iam.googleapis.com][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["storage-api.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/storage-api.googleapis.com][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["cloudresourcemanager.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/cloudresourcemanager.googleapis.com][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["sqladmin.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["iam.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["storage-component.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["storage-component.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/storage-component.googleapis.com][0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["cloudresourcemanager.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["servicenetworking.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["serviceusage.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["sqladmin.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["run.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["storage-component.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/storage-component.googleapis.com][0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["serviceusage.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/serviceusage.googleapis.com][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["cloudkms.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/cloudkms.googleapis.com][0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["run.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/run.googleapis.com][0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["compute.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["cloudresourcemanager.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/cloudresourcemanager.googleapis.com][0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["logging.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["storage-api.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["sqladmin.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/sqladmin.googleapis.com][0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["monitoring.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["run.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/run.googleapis.com][0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["iam.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/iam.googleapis.com][0m
+[0m[1mmodule.artifact_tracking_mlflow[0].google_project_service.required["sqladmin.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/sqladmin.googleapis.com][0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["sql-component.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["cloudkms.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["servicenetworking.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/servicenetworking.googleapis.com][0m
+[0m[1mmodule.model_monitoring_grafana[0].google_project_iam_member.grafana_cloudsql_client: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["serviceusage.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["servicenetworking.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_monitoring_grafana[0].google_cloud_run_service.grafana: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["cloudkms.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/cloudkms.googleapis.com][0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["sql-component.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/sql-component.googleapis.com][0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["storage-api.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/storage-api.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["logging.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["compute.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/compute.googleapis.com][0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["monitoring.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/monitoring.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["storage-api.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["serviceusage.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/serviceusage.googleapis.com][0m
+[0m[1mmodule.model_registry_mlflow[0].google_project_service.required["logging.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/logging.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["servicenetworking.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/servicenetworking.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["iam.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["compute.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["run.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["sql-component.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["monitoring.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["cloudresourcemanager.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["cloudresourcemanager.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/cloudresourcemanager.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["run.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/run.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["logging.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/logging.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["iam.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/iam.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["sql-component.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/sql-component.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["storage-api.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/storage-api.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["compute.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/compute.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["cloudkms.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["monitoring.googleapis.com"]: Creation complete after 3s [id=deploy-ml-lab/monitoring.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["sqladmin.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["storage-component.googleapis.com"]: Creating...[0m[0m
+[0m[1mmodule.model_monitoring_grafana[0].google_project_iam_member.grafana_cloudsql_client: Creation complete after 8s [id=deploy-ml-lab/roles/cloudsql.client/serviceAccount:626687515067-compute@developer.gserviceaccount.com][0m
+[0m[1mmodule.model_monitoring_grafana[0].google_cloud_run_service.grafana: Still creating... [00m10s elapsed][0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["sqladmin.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/sqladmin.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["cloudkms.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/cloudkms.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_project_service.required["storage-component.googleapis.com"]: Creation complete after 4s [id=deploy-ml-lab/storage-component.googleapis.com][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_cloud_run_service.mlflow[0]: Creating...[0m[0m
+[0m[1mmodule.model_monitoring_grafana[0].google_cloud_run_service.grafana: Still creating... [00m20s elapsed][0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_cloud_run_service.mlflow[0]: Still creating... [00m10s elapsed][0m[0m
+[0m[1mmodule.model_monitoring_grafana[0].google_cloud_run_service.grafana: Creation complete after 27s [id=locations/us-west1/namespaces/deploy-ml-lab/services/grafana-server][0m
+[0m[1mmodule.model_monitoring_grafana[0].google_cloud_run_service_iam_member.public[0]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_cloud_run_service.mlflow[0]: Still creating... [00m20s elapsed][0m[0m
+[0m[1mmodule.model_monitoring_grafana[0].google_cloud_run_service_iam_member.public[0]: Creation complete after 4s [id=v1/projects/deploy-ml-lab/locations/us-west1/services/grafana-server/roles/run.invoker/allUsers][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_cloud_run_service.mlflow[0]: Still creating... [00m30s elapsed][0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_cloud_run_service.mlflow[0]: Still creating... [00m40s elapsed][0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_cloud_run_service.mlflow[0]: Still creating... [00m50s elapsed][0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_cloud_run_service.mlflow[0]: Creation complete after 57s [id=locations/us-west1/namespaces/deploy-ml-lab/services/mlflow-server][0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_cloud_run_service_iam_member.public[0]: Creating...[0m[0m
+[0m[1mmodule.experiment_tracking_mlflow[0].google_cloud_run_service_iam_member.public[0]: Creation complete after 4s [id=v1/projects/deploy-ml-lab/locations/us-west1/services/mlflow-server/roles/run.invoker/allUsers][0m
+[0m[1mmodule.model_serving_fastapi[0].google_cloud_run_service.fastapi: Creating...[0m[0m
+[0m[1mmodule.model_serving_fastapi[0].google_cloud_run_service.fastapi: Still creating... [00m10s elapsed][0m[0m
+[0m[1mmodule.model_serving_fastapi[0].google_cloud_run_service.fastapi: Still creating... [00m20s elapsed][0m[0m
+[0m[1mmodule.model_serving_fastapi[0].google_cloud_run_service.fastapi: Still creating... [00m30s elapsed][0m[0m
+[0m[1mmodule.model_serving_fastapi[0].google_cloud_run_service.fastapi: Still creating... [00m40s elapsed][0m[0m
+[0m[1mmodule.model_serving_fastapi[0].google_cloud_run_service.fastapi: Creation complete after 46s [id=locations/us-west1/namespaces/deploy-ml-lab/services/fastapi-mlflow-server][0m
+[0m[1mmodule.model_serving_fastapi[0].google_cloud_run_service_iam_member.public[0]: Creating...[0m[0m
+[0m[1mmodule.model_serving_fastapi[0].google_cloud_run_service_iam_member.public[0]: Creation complete after 5s [id=v1/projects/deploy-ml-lab/locations/us-west1/services/fastapi-mlflow-server/roles/run.invoker/allUsers][0m
+[0m[1m[32m
+Apply complete! Resources: 74 added, 0 changed, 0 destroyed.[0m
+[0m[1m[32m
+Outputs:
+
+[0martifact_bucket = "mlflow-artifacts-deploy-ml-lab"
+bigquery_dataset = "mlops"
+fastapi_url = "https://fastapi-mlflow-server-k3u4xkonya-uw.a.run.app"
+grafana_url = "https://grafana-server-k3u4xkonya-uw.a.run.app"
+mlflow_url = "https://mlflow-server-k3u4xkonya-uw.a.run.app"
+postgresql_credentials = <sensitive>
