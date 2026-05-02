@@ -218,9 +218,17 @@ def _embed_chunks(chunks: list[str]) -> np.ndarray:
 
 
 def _cosine_sim(query: np.ndarray, corpus: np.ndarray) -> np.ndarray:
-    q     = query / (np.linalg.norm(query) + 1e-9)
-    norms = np.linalg.norm(corpus, axis=1, keepdims=True) + 1e-9
-    return (corpus / norms) @ q
+    query  = np.nan_to_num(query.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+    corpus = np.nan_to_num(corpus.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+
+    q_norm  = np.linalg.norm(query)
+    c_norms = np.linalg.norm(corpus, axis=1)
+
+    if q_norm == 0:
+        return np.zeros(corpus.shape[0], dtype=np.float32)
+
+    safe_c_norms = np.where(c_norms == 0, 1e-9, c_norms)
+    return (corpus @ query) / (safe_c_norms * q_norm)
 
 
 def _retrieve_top_clauses(chunk_vectors: np.ndarray) -> list[dict]:
@@ -359,12 +367,11 @@ def _run_rag_pipeline(text: str) -> dict:
 
     # Step 4 — analyze each chunk in parallel
     t3 = time.time()
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = [
-            executor.submit(_analyze_single_chunk, chunk, similar)
-            for chunk in chunks
-        ]
-        chunk_results = [f.result() for f in futures]
+    futures = [
+        _executor.submit(_analyze_single_chunk, chunk, similar)
+        for chunk in chunks
+    ]
+    chunk_results = [f.result() for f in futures]
     print(f"[TIMING] Gemini calls (parallel): {time.time() - t3:.2f}s | {len(chunks)} chunks")
 
     # Step 5 — merge
