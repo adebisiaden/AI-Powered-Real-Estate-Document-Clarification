@@ -1,53 +1,56 @@
-* {
-  box-sizing: border-box;
-}
+/* App.css additions — paste at the bottom of your existing App.css */
 
-html, body, #root, .App {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
-.App {
+.app-shell {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f7f3eb;
-  color: #3d2e1e;
-  font-size: 14px;
+  background: #f8fafc;
+  font-family: 'Georgia', serif;
 }
 
-/* ── Navbar ───────────────────────────────────────────────── */
-
-.App-nav {
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
   height: 56px;
-  flex-shrink: 0;
+  background: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.app-header-logo {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.3px;
+}
+
+.app-header-right {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0 1.25rem;
-  border-bottom: 1px solid rgba(122, 92, 62, 0.2);
-  background-color: #e8dfd0;
 }
 
-.App-nav-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #4a6e50;
-  white-space: nowrap;
-}
-
-.App-nav-tagline {
+.header-signin-btn {
+  padding: 0.4rem 0.9rem;
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 6px;
   font-size: 0.8rem;
-  color: #8c7060;
-  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: inherit;
 }
 
+.header-signin-btn:hover {
+  color: #f8fafc;
+  border-color: #64748b;
+}
 
-/* ── Main content area ────────────────────────────────────── */
-
-.App-main {
+.app-main {
   flex: 1;
-  overflow: hidden;
-  display: flex;
 }
