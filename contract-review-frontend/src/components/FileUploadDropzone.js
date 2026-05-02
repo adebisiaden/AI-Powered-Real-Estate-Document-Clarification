@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import axios from 'axios';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { apiUrl } from '../api';
+import { analyseFile } from '../api';
 import './FileUploadDropzone.css';
 
 // eslint-disable-next-line no-new
@@ -25,33 +24,19 @@ function isAllowedFile(file) {
   return name.endsWith('.pdf') || name.endsWith('.docx');
 }
 
-function detailFromAxiosError(err) {
-  const status = err.response?.status;
-  const d = err.response?.data?.detail;
-  if (typeof d === 'string') {
-    if (status === 404 && d === 'Not Found') {
-      return `${d} (HTTP 404). Run the Phase 2 API from folder contract-review-backend: uvicorn main:app --reload --host 0.0.0.0 --port 8000`;
-    }
-    return d;
-  }
-  if (Array.isArray(d) && d[0]?.msg) return d.map((x) => x.msg).join('; ');
-  if (status) return `HTTP ${status}: ${err.message || 'Upload failed'}`;
-  return err.message || 'Upload failed';
-}
-
-export function FileUploadDropzone() {
+// token is null for guests, Firebase ID token string for signed-in users
+export function FileUploadDropzone({ token }) {
   const inputRef = useRef(null);
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab]   = useState('summary');
-  const [numPages, setNumPages]     = useState(null);
+  const [activeTab, setActiveTab] = useState('summary');
+  const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
-  const [pdfUrl, setPdfUrl]         = useState(null);
-  const pdfContainerRef             = useRef(null);
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const pdfContainerRef = useRef(null);
   const [pdfContainerWidth, setPdfContainerWidth] = useState(0);
 
   useEffect(() => {
@@ -81,34 +66,26 @@ export function FileUploadDropzone() {
   const resetMessages = useCallback(() => {
     setResult(null);
     setError(null);
-    setProgress(0);
   }, []);
 
-  const pickFile = useCallback(
-    (f) => {
-      if (!f || !isAllowedFile(f)) {
-        setFile(null);
-        setError('Only PDF or DOCX files are allowed.');
-        setResult(null);
-        return;
-      }
-      setFile(f);
-      setError(null);
+  const pickFile = useCallback((f) => {
+    if (!f || !isAllowedFile(f)) {
+      setFile(null);
+      setError('Only PDF or DOCX files are allowed.');
       setResult(null);
-    },
-    [setError, setFile, setResult]
-  );
+      return;
+    }
+    setFile(f);
+    setError(null);
+    setResult(null);
+  }, []);
 
-  const onDrop = useCallback(
-    (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setDragActive(false);
-      const f = e.dataTransfer?.files?.[0];
-      pickFile(f);
-    },
-    [pickFile]
-  );
+  const onDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    pickFile(e.dataTransfer?.files?.[0]);
+  }, [pickFile]);
 
   const onDragOver = useCallback((e) => {
     e.preventDefault();
@@ -122,44 +99,36 @@ export function FileUploadDropzone() {
     setDragActive(false);
   }, []);
 
-  const onInputChange = useCallback(
-    (e) => {
-      const f = e.target.files?.[0];
-      pickFile(f);
-      e.target.value = '';
-    },
-    [pickFile]
-  );
+  const onInputChange = useCallback((e) => {
+    pickFile(e.target.files?.[0]);
+    e.target.value = '';
+  }, [pickFile]);
 
   const upload = async () => {
     if (!file) return;
     resetMessages();
     setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const { data } = await axios.post(apiUrl('/upload'), formData, {
-        onUploadProgress: (ev) => {
-          if (ev.total) setProgress(Math.round((ev.loaded * 100) / ev.total));
-          else setProgress(0);
-        },
-      });
+      // analyseFile picks /analyse/guest (no token) or /analyse (with token)
+      const data = await analyseFile(file, token);
       setResult(data);
-      console.log('Full API response:', data);
-      console.log('Risks array:', data?.analysis?.risks);
-      setProgress(100);
       setActiveTab('summary');
     } catch (err) {
-      setError(detailFromAxiosError(err));
-      setProgress(0);
+      setError(err.message || 'Upload failed.');
     } finally {
       setUploading(false);
     }
   };
 
-  const risksCount   = result?.analysis?.risks?.length ?? 0;
-  const clausesCount = result?.analysis?.clauses?.filter(c => c.found)?.length ?? 0;
+  // New backend shape: analysis.clauses[] each has { found, type, risk, flag, excerpt, plain_english }
+  const analysis      = result?.analysis ?? {};
+  const clauses       = analysis.clauses ?? [];
+  const foundClauses  = clauses.filter(c => c.found);
+  const missingClauses = clauses.filter(c => !c.found);
+  const highRiskItems = clauses.filter(c => c.found && c.risk === 'High');
+  const medRiskItems  = clauses.filter(c => c.found && c.risk === 'Medium');
+  const flaggedItems  = clauses.filter(c => c.found && c.flag);
+  const isComplete    = !!result;
 
   return (
     <div className="split-layout">
@@ -204,13 +173,25 @@ export function FileUploadDropzone() {
             </div>
           )}
 
+          {/* Guest notice */}
+          {!token && (
+            <p style={{
+              fontSize: '0.78rem',
+              color: '#92400e',
+              background: '#fffbeb',
+              border: '1px solid #fde68a',
+              borderRadius: '6px',
+              padding: '0.5rem 0.75rem',
+              margin: '0.5rem 0 0',
+            }}>
+              👤 Guest mode — analysis won't be saved to an account.
+            </p>
+          )}
+
           <button
             type="button"
             className="upload-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              upload();
-            }}
+            onClick={(e) => { e.stopPropagation(); upload(); }}
             disabled={!file || uploading}
           >
             {uploading ? 'Analyzing…' : 'Upload & Analyze'}
@@ -219,28 +200,25 @@ export function FileUploadDropzone() {
           {uploading && (
             <div className="progress-wrap" aria-live="polite">
               <div className="progress-bar">
-                <div
-                  className="progress-bar-fill"
-                  style={{ width: `${progress}%` }}
-                />
+                <div className="progress-bar-fill" style={{ width: '100%', animation: 'pulse 1.5s infinite' }} />
               </div>
-              <span className="progress-label">{progress}%</span>
-              {progress === 100 && (
-                <span className="analyzing-label">Analyzing with Gemini...</span>
+              <span className="analyzing-label">Analyzing with Claude AI…</span>
+            </div>
+          )}
+
+          {isComplete && (
+            <div className="status-complete" role="status">
+              ✓ Analysis complete — {file?.name}
+              {token && result?.record_id && (
+                <span style={{ display: 'block', fontSize: '0.75rem', color: '#6b7280', marginTop: '2px' }}>
+                  Saved to your account
+                </span>
               )}
             </div>
           )}
 
-          {result?.status === 'success' && (
-            <div className="status-complete" role="status">
-              ✓ Analysis complete — {result.filename}
-            </div>
-          )}
-
           {error && (
-            <div className="alert alert--error" role="alert">
-              {error}
-            </div>
+            <div className="alert alert--error" role="alert">{error}</div>
           )}
 
           {pdfUrl ? (
@@ -262,29 +240,14 @@ export function FileUploadDropzone() {
                 </Document>
               </div>
               <div className="pdf-nav">
-                <button
-                  className="pdf-nav-btn"
-                  onClick={() => setPageNumber(p => Math.max(1, p - 1))}
-                  disabled={pageNumber <= 1}
-                >
+                <button className="pdf-nav-btn" onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber <= 1}>
                   ← Prev
                 </button>
-                <span className="pdf-page-label">
-                  Page {pageNumber} of {numPages ?? '…'}
-                </span>
-                <button
-                  className="pdf-nav-btn"
-                  onClick={() => setPageNumber(p => Math.min(numPages ?? p, p + 1))}
-                  disabled={pageNumber >= (numPages ?? 1)}
-                >
+                <span className="pdf-page-label">Page {pageNumber} of {numPages ?? '…'}</span>
+                <button className="pdf-nav-btn" onClick={() => setPageNumber(p => Math.min(numPages ?? p, p + 1))} disabled={pageNumber >= (numPages ?? 1)}>
                   Next →
                 </button>
               </div>
-            </div>
-          ) : result?.text ? (
-            <div className="extract-section">
-              <h3 className="extract-heading">Contract Text</h3>
-              <pre className="extract-preview">{result.text}</pre>
             </div>
           ) : null}
         </div>
@@ -292,70 +255,101 @@ export function FileUploadDropzone() {
 
       {/* RIGHT PANEL */}
       <div className="panel panel--right">
-        {result?.status === 'success' ? (
+        {isComplete ? (
           <>
             <div className="tab-bar">
-              <button
-                className={`tab-btn ${activeTab === 'summary' ? 'tab-btn--active' : ''}`}
-                onClick={() => setActiveTab('summary')}
-              >
-                Summary
+              <button className={`tab-btn ${activeTab === 'summary'  ? 'tab-btn--active' : ''}`} onClick={() => setActiveTab('summary')}>Summary</button>
+              <button className={`tab-btn ${activeTab === 'risks'    ? 'tab-btn--active' : ''}`} onClick={() => setActiveTab('risks')}>
+                Risk Flags{flaggedItems.length > 0 ? ` (${flaggedItems.length})` : ''}
               </button>
-              <button
-                className={`tab-btn ${activeTab === 'risks' ? 'tab-btn--active' : ''}`}
-                onClick={() => setActiveTab('risks')}
-              >
-                Risk Flags{risksCount > 0 ? ` (${risksCount})` : ''}
-              </button>
-              <button
-                className={`tab-btn ${activeTab === 'clauses' ? 'tab-btn--active' : ''}`}
-                onClick={() => setActiveTab('clauses')}
-              >
-                Identified Clauses{clausesCount > 0 ? ` (${clausesCount})` : ''}
+              <button className={`tab-btn ${activeTab === 'clauses'  ? 'tab-btn--active' : ''}`} onClick={() => setActiveTab('clauses')}>
+                Clauses{foundClauses.length > 0 ? ` (${foundClauses.length})` : ''}
               </button>
             </div>
 
             <div className="tab-content">
+
+              {/* ── SUMMARY TAB ── */}
               {activeTab === 'summary' && (
                 <div className="analysis-section">
-                  {result.analysis?.summary && (
-                    <p className="analysis-summary">{result.analysis.summary}</p>
+                  {analysis.summary && (
+                    <p className="analysis-summary">{analysis.summary}</p>
                   )}
                   <div className="metrics-row">
                     <div className="metric-card">
-                      <span className="metric-label">Risk Level</span>
-                      <span className="metric-value">
-                        {(() => {
-                          const risks = result.analysis?.risks || [];
-                          if (risks.some(r => r.risk_level === 'High'))   return 'High';
-                          if (risks.some(r => r.risk_level === 'Medium')) return 'Medium';
-                          return 'Low';
-                        })()}
+                      <span className="metric-label">Overall Risk</span>
+                      <span className={`metric-value risk-${(analysis.overall_risk || 'low').toLowerCase()}`}>
+                        {analysis.overall_risk || '—'}
                       </span>
                     </div>
                     <div className="metric-card">
+                      <span className="metric-label">Monthly Rent</span>
+                      <span className="metric-value">{analysis.monthly_rent || '—'}</span>
+                    </div>
+                    <div className="metric-card">
+                      <span className="metric-label">Lease Term</span>
+                      <span className="metric-value">{analysis.lease_term || '—'}</span>
+                    </div>
+                    <div className="metric-card">
                       <span className="metric-label">Clauses Found</span>
-                      <span className="metric-value">{clausesCount}</span>
+                      <span className="metric-value">{foundClauses.length}</span>
                     </div>
                   </div>
+
+                  {analysis.recommended_action && (
+                    <div style={{
+                      marginTop: '1rem',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '8px',
+                      background: analysis.recommended_action === 'Looks reasonable' ? '#f0fdf4' :
+                                  analysis.recommended_action === 'Seek advice before signing' ? '#fef2f2' : '#fffbeb',
+                      border: `1px solid ${analysis.recommended_action === 'Looks reasonable' ? '#bbf7d0' :
+                               analysis.recommended_action === 'Seek advice before signing' ? '#fecaca' : '#fde68a'}`,
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                    }}>
+                      📋 {analysis.recommended_action}
+                    </div>
+                  )}
+
+                  {analysis.tenant_friendly_terms?.length > 0 && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <h4 style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>✅ Tenant-Friendly Terms</h4>
+                      <ul style={{ paddingLeft: '1.25rem', fontSize: '0.85rem', color: '#374151' }}>
+                        {analysis.tenant_friendly_terms.map((t, i) => <li key={i}>{t}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {analysis.top_concerns?.length > 0 && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <h4 style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem' }}>⚠️ Top Concerns</h4>
+                      <ul style={{ paddingLeft: '1.25rem', fontSize: '0.85rem', color: '#374151' }}>
+                        {analysis.top_concerns.map((c, i) => <li key={i}>{c}</li>)}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
 
+              {/* ── RISKS TAB ── */}
               {activeTab === 'risks' && (
                 <div className="analysis-section">
-                  {risksCount > 0 ? (
-                    result.analysis.risks.map((risk, i) => (
-                      <div
-                        key={i}
-                        className={`risk-item risk-item--${(risk.risk_level || 'medium').toLowerCase()}`}
-                      >
+                  {flaggedItems.length > 0 ? (
+                    flaggedItems.map((clause, i) => (
+                      <div key={i} className={`risk-item risk-item--${(clause.risk || 'medium').toLowerCase()}`}>
                         <div className="risk-item-header">
-                          <strong>{risk.clause}</strong>
-                          <span className={`risk-badge risk-badge--${(risk.risk_level || 'medium').toLowerCase()}`}>
-                            {risk.risk_level || 'Medium'}
+                          <strong>{clause.type}</strong>
+                          <span className={`risk-badge risk-badge--${(clause.risk || 'medium').toLowerCase()}`}>
+                            {clause.risk || 'Medium'}
                           </span>
                         </div>
-                        <p>{risk.reason}</p>
+                        {clause.excerpt && (
+                          <p style={{ fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic', margin: '0.25rem 0' }}>
+                            "{clause.excerpt}"
+                          </p>
+                        )}
+                        <p>{clause.flag}</p>
                       </div>
                     ))
                   ) : (
@@ -364,42 +358,47 @@ export function FileUploadDropzone() {
                 </div>
               )}
 
+              {/* ── CLAUSES TAB ── */}
               {activeTab === 'clauses' && (
                 <div className="analysis-section">
-                  {(() => {
-                    const all     = result.analysis.clauses || [];
-                    const found   = all.filter(c => c.found);
-                    const missing = all.filter(c => !c.found);
-                    return (
-                      <>
-                        {found.length > 0 ? (
-                          found.map((clause, i) => (
-                            <div key={i} className="clause-item">
-                              <strong>{clause.clause_type}</strong>
-                              <p className="clause-excerpt">
-                                "{(clause.text || '').slice(0, 200)}
-                                {(clause.text || '').length > 200 ? '…' : ''}"
-                              </p>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="empty-state">No clauses identified.</p>
+                  {foundClauses.length > 0 ? (
+                    foundClauses.map((clause, i) => (
+                      <div key={i} className="clause-item">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <strong>{clause.type}</strong>
+                          {clause.risk && clause.risk !== 'None' && (
+                            <span className={`risk-badge risk-badge--${clause.risk.toLowerCase()}`}>
+                              {clause.risk}
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '0.85rem', color: '#374151', margin: '0.35rem 0 0' }}>
+                          {clause.plain_english}
+                        </p>
+                        {clause.excerpt && (
+                          <p className="clause-excerpt">
+                            "{clause.excerpt.slice(0, 200)}{clause.excerpt.length > 200 ? '…' : ''}"
+                          </p>
                         )}
-                        {missing.length > 0 && (
-                          <div className="missing-clauses">
-                            <h4 className="missing-heading">Not Found ({missing.length})</h4>
-                            <div className="missing-list">
-                              {missing.map((clause, i) => (
-                                <span key={i} className="missing-tag">{clause.clause_type}</span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="empty-state">No clauses identified.</p>
+                  )}
+
+                  {missingClauses.length > 0 && (
+                    <div className="missing-clauses">
+                      <h4 className="missing-heading">Not Found ({missingClauses.length})</h4>
+                      <div className="missing-list">
+                        {missingClauses.map((clause, i) => (
+                          <span key={i} className="missing-tag">{clause.type}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
+
             </div>
           </>
         ) : (
