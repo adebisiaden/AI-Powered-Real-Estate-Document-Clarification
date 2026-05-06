@@ -1,56 +1,126 @@
-/* App.css additions — paste at the bottom of your existing App.css */
+/* ── App shell ───────────────────────────────────────────── */
 
-.app-shell {
+.App {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8fafc;
-  font-family: 'Georgia', serif;
 }
 
-.app-header {
+/* ── Loading dots ────────────────────────────────────────── */
+
+.App-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 0.5rem;
+}
+
+.App-loading-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #7a5c3e;
+  animation: dotPulse 1.2s ease-in-out infinite;
+}
+
+.App-loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.App-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dotPulse {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40%           { opacity: 1;   transform: scale(1); }
+}
+
+/* ── Navbar ──────────────────────────────────────────────── */
+
+.App-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 1.5rem;
-  height: 56px;
-  background: #0f172a;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  height: 60px;
+  background: #f0ebe0;
+  border-bottom: 1px solid rgba(122, 92, 62, 0.2);
+  box-shadow: 0 1px 4px rgba(74, 55, 40, 0.08);
   position: sticky;
   top: 0;
   z-index: 50;
 }
 
-.app-header-logo {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #f8fafc;
-  letter-spacing: -0.3px;
+.App-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
 }
 
-.app-header-right {
+.App-nav-logo {
+  height: 44px;
+  width: auto;
+}
+
+.App-nav-brand {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.App-nav-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #4a3728;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-family: Georgia, serif;
+}
+
+.App-nav-tagline {
+  font-size: 0.62rem;
+  color: #8c7060;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* ── Nav right: guest mode ───────────────────────────────── */
+
+.App-nav-right {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-.header-signin-btn {
-  padding: 0.4rem 0.9rem;
-  background: transparent;
-  color: #94a3b8;
-  border: 1px solid #334155;
+.App-nav-guest-badge {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #4a7c59;
+  background: rgba(74, 124, 89, 0.1);
+  border: 1px solid rgba(74, 124, 89, 0.25);
+  padding: 0.28rem 0.75rem;
+  border-radius: 20px;
+}
+
+.App-nav-signin-btn {
+  padding: 0.38rem 1rem;
+  background: #5c3d2e;
+  color: #f5f0e6;
+  border: none;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  letter-spacing: 0.02em;
+  transition: background 0.15s, transform 0.1s;
   font-family: inherit;
 }
 
-.header-signin-btn:hover {
-  color: #f8fafc;
-  border-color: #64748b;
+.App-nav-signin-btn:hover {
+  background: #4a3020;
+  transform: translateY(-1px);
 }
 
-.app-main {
+/* ── Main ────────────────────────────────────────────────── */
+
+.App-main {
   flex: 1;
 }

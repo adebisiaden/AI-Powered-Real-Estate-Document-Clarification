@@ -3,7 +3,11 @@
 // Guest requests go to /analyse/guest — no token needed.
 // Authenticated requests go to /analyse, /history, etc.
 
-const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:8000";
+
+export function apiUrl(path) {
+  return `${BASE_URL}${path}`;
+}
 
 function authHeaders(token) {
   return token

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { jsPDF } from 'jspdf';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -161,6 +162,108 @@ export function FileUploadDropzone() {
   const risksCount   = result?.analysis?.risks?.length ?? 0;
   const clausesCount = result?.analysis?.clauses?.filter(c => c.found)?.length ?? 0;
 
+  const downloadPDF = () => {
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const margin = 50;
+    const pageW = doc.internal.pageSize.getWidth();
+    const maxW  = pageW - margin * 2;
+    let y = margin;
+
+    const addPage = () => { doc.addPage(); y = margin; };
+
+    const checkY = (needed = 20) => { if (y + needed > doc.internal.pageSize.getHeight() - margin) addPage(); };
+
+    const h2 = (text) => {
+      checkY(24);
+      doc.setFont('helvetica', 'bold').setFontSize(13).setTextColor(0);
+      doc.text(text, margin, y);
+      y += 8;
+      doc.setDrawColor(180).setLineWidth(0.5).line(margin, y, pageW - margin, y);
+      y += 14;
+    };
+    const body = (text, indent = 0) => {
+      doc.setFont('helvetica', 'normal').setFontSize(10).setTextColor(30);
+      const lines = doc.splitTextToSize(text, maxW - indent);
+      lines.forEach(line => { checkY(14); doc.text(line, margin + indent, y); y += 14; });
+    };
+    const spacer = (n = 12) => { y += n; };
+
+    // Header
+    doc.setFont('helvetica', 'bold').setFontSize(22).setTextColor(0);
+    doc.text('Lease Lens', margin, y);
+    y += 20;
+    doc.setFont('helvetica', 'normal').setFontSize(10).setTextColor(100);
+    doc.text('Contract Analysis Report', margin, y);
+    y += 10;
+    doc.text(`File: ${result.filename || file?.name || ''}`, margin, y);
+    y += 10;
+    doc.text(`Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, margin, y);
+    y += 6;
+    doc.setDrawColor(60).setLineWidth(1).line(margin, y, pageW - margin, y);
+    y += 24;
+
+    // Summary
+    h2('Summary');
+    if (result.analysis?.summary) body(result.analysis.summary);
+    spacer();
+
+    const risks = result.analysis?.risks || [];
+    const allClauses = result.analysis?.clauses || [];
+    const foundClauses = allClauses.filter(c => c.found);
+    const missingClauses = allClauses.filter(c => !c.found);
+
+    const riskLevel = risks.some(r => r.risk_level === 'High') ? 'High'
+      : risks.some(r => r.risk_level === 'Medium') ? 'Medium' : 'Low';
+
+    body(`Risk Level: ${riskLevel}   |   Risk Flags: ${risks.length}   |   Clauses Found: ${foundClauses.length}`);
+    spacer(20);
+
+    // Risk Flags
+    h2(`Risk Flags (${risks.length})`);
+    if (risks.length === 0) {
+      body('No risk flags identified.');
+    } else {
+      risks.forEach((risk, i) => {
+        checkY(40);
+        doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(0);
+        doc.text(`${i + 1}. ${risk.clause}`, margin, y);
+        doc.setFont('helvetica', 'bold').setFontSize(9).setTextColor(
+          risk.risk_level === 'High' ? 180 : risk.risk_level === 'Medium' ? 140 : 80,
+          risk.risk_level === 'High' ? 30 : risk.risk_level === 'Medium' ? 100 : 120,
+          30
+        );
+        doc.text(`[${risk.risk_level || 'Medium'}]`, pageW - margin - 50, y, { align: 'right' });
+        y += 14;
+        body(risk.reason, 12);
+        spacer(6);
+      });
+    }
+    spacer(8);
+
+    // Identified Clauses
+    h2(`Identified Clauses (${foundClauses.length})`);
+    if (foundClauses.length === 0) {
+      body('No clauses identified.');
+    } else {
+      foundClauses.forEach((clause, i) => {
+        checkY(40);
+        doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(0);
+        doc.text(`${i + 1}. ${clause.clause_type}`, margin, y);
+        y += 14;
+        if (clause.text) body(`"${clause.text.slice(0, 300)}${clause.text.length > 300 ? '…' : ''}"`, 12);
+        spacer(6);
+      });
+    }
+
+    if (missingClauses.length > 0) {
+      spacer(8);
+      h2(`Not Found (${missingClauses.length})`);
+      body(missingClauses.map(c => c.clause_type).join(', '));
+    }
+
+    doc.save(`lease-lens-report-${(result.filename || 'analysis').replace(/\.[^.]+$/, '')}.pdf`);
+  };
+
   return (
     <div className="split-layout">
 
@@ -235,6 +338,12 @@ export function FileUploadDropzone() {
             <div className="status-complete" role="status">
               ✓ Analysis complete — {result.filename}
             </div>
+          )}
+
+          {result?.status === 'success' && (
+            <button className="download-btn" onClick={downloadPDF}>
+              Download Report (PDF)
+            </button>
           )}
 
           {error && (
