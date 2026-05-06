@@ -117,6 +117,26 @@
   opacity: 0.88;
 }
 
+.download-btn {
+  align-self: stretch;
+  font-size: 0.88rem;
+  padding: 0.45rem 1rem;
+  cursor: pointer;
+  background: transparent;
+  color: #4a3728;
+  border: 1.5px solid rgba(74, 55, 40, 0.45);
+  border-radius: 6px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+  letter-spacing: 0.01em;
+}
+
+.download-btn:hover {
+  background: rgba(74, 55, 40, 0.06);
+  border-color: rgba(74, 55, 40, 0.7);
+}
+
 .progress-wrap {
   display: flex;
   align-items: center;

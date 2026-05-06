@@ -43,8 +43,11 @@ function App() {
     <div className="App">
       <nav className="App-nav">
         <div className="App-nav-left">
-          <span className="App-nav-title">Contract Review</span>
-          <span className="App-nav-tagline">AI-powered contract analysis</span>
+          <img src="/logo-icon-transparent.png" alt="Lease Lens" className="App-nav-logo" />
+          <div className="App-nav-brand">
+            <span className="App-nav-title">Lease Lens</span>
+            <span className="App-nav-tagline">Legal Review Document</span>
+          </div>
         </div>
 
         <div className="App-nav-right">
@@ -52,7 +55,7 @@ function App() {
             <UserMenu />
           ) : (
             <>
-              <span className="App-nav-guest-label">Guest mode</span>
+              <span className="App-nav-guest-badge">Guest mode</span>
               <button
                 className="App-nav-signin-btn"
                 onClick={() => setGuestMode(false)}

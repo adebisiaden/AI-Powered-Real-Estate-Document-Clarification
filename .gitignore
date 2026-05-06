@@ -23,3 +23,5 @@ cuad_acord_vectors.npy
 build_index_ckpt_clauses.json
 build_index_ckpt_vectors.npy
 cuad_hf_cache/
+.vercel
+.env*.local
