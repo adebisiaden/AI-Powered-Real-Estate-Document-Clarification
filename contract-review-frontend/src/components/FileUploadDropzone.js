@@ -41,6 +41,21 @@ export function FileUploadDropzone({ token }) {
   const pdfContainerRef             = useRef(null);
   const [pdfContainerWidth, setPdfContainerWidth] = useState(0);
   const [statusMsg, setStatusMsg] = useState('');
+  const [analyzeProgress, setAnalyzeProgress] = useState(0);
+
+  // Crawling progress bar on right panel while analyzing
+  useEffect(() => {
+    if (uploadPhase !== 'analyzing') { if (uploadPhase !== 'done') setAnalyzeProgress(0); return; }
+    setAnalyzeProgress(0);
+    const timer = setInterval(() => {
+      setAnalyzeProgress(prev => prev >= 85 ? prev : prev + (85 - prev) * 0.06);
+    }, 400);
+    return () => clearInterval(timer);
+  }, [uploadPhase]);
+
+  useEffect(() => {
+    if (uploadPhase === 'done') setAnalyzeProgress(100);
+  }, [uploadPhase]);
 
   const ANIM_STEPS = [
     'Uploading…',
@@ -358,10 +373,6 @@ export function FileUploadDropzone({ token }) {
               : 'Upload & Analyze'}
           </button>
 
-          {(uploadPhase === 'analyzing' || uploadPhase === 'done') && !result?.status && (
-            <div className="upload-uploaded-label" role="status">✓ Uploaded</div>
-          )}
-
           {result?.status === 'success' && (
             <div className="status-complete" role="status">
               ✓ Analysis complete — {result.filename}
@@ -542,9 +553,10 @@ export function FileUploadDropzone({ token }) {
         ) : uploadPhase === 'analyzing' ? (
           <div className="panel-analyzing" aria-live="polite">
             <span className="panel-analyzing-msg">{statusMsg}</span>
-            <div className="panel-analyzing-bar">
-              <div className="panel-analyzing-bar-fill" />
+            <div className="panel-analyzing-progress">
+              <div className="panel-analyzing-progress-fill" style={{ width: `${analyzeProgress}%` }} />
             </div>
+            <span className="panel-analyzing-pct">{Math.round(analyzeProgress)}%</span>
             <div className="panel-analyzing-dots">
               <span /><span /><span />
             </div>
