@@ -122,6 +122,35 @@
   opacity: 0.88;
 }
 
+.result-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.reanalyse-btn {
+  flex: 1;
+  font-size: 0.88rem;
+  padding: 0.45rem 1rem;
+  cursor: pointer;
+  background: transparent;
+  color: #6b5242;
+  border: 1.5px solid rgba(107, 82, 66, 0.35);
+  border-radius: 6px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.reanalyse-btn:hover:not(:disabled) {
+  background: rgba(107, 82, 66, 0.07);
+  border-color: rgba(107, 82, 66, 0.6);
+}
+
+.reanalyse-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .download-btn {
   align-self: stretch;
   font-size: 0.88rem;

@@ -11,7 +11,7 @@ from typing import Optional
 import numpy as np
 from docx import Document
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Header, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from google.cloud import storage
@@ -826,6 +826,7 @@ async def analyse_authenticated(
 async def analyse_stream(
     file: UploadFile = File(...),
     authorization: Optional[str] = Header(None),
+    force: bool = Query(False),
 ):
     user_id  = _verify_token(authorization)
     filename = _original_filename(file)
@@ -841,7 +842,7 @@ async def analyse_stream(
         try:
             yield _sse("Reading document…")
             file_hash = _file_hash(content)
-            cached    = await loop.run_in_executor(_executor, lambda: _get_cached(user_id, file_hash))
+            cached    = None if force else await loop.run_in_executor(_executor, lambda: _get_cached(user_id, file_hash))
             if cached:
                 new_id = str(uuid.uuid4())
                 asyncio.create_task(_bg_save(user_id, cached["filename"], file_hash, new_id, cached["analysis"]))
