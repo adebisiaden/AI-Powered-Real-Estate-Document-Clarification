@@ -1,0 +1,17 @@
+contract-review-backend/mlops
+contract-review-backend/__pycache__
+contract-review-backend/*.pyc
+contract-review-backend/test_analyze.py
+contract-review-frontend/node_modules
+contract-review-frontend/build
+cuad_hf_cache
+cuad_acord_vectors.npy
+cuad_acord_clauses.json
+*.mov
+*.mp4
+*.pptx
+*.pdf
+*.png
+tests
+docker
+app

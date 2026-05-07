@@ -229,7 +229,10 @@ When given a contract, analyze it and identify:
 
 1. A plain-English summary (5-7 sentences, no jargon).
 
-2. ALL risk items as a JSON array — each with a clause name, risk_level (High/Medium/Low), and one-sentence reason.
+2. ALL risk items as a JSON array — each with:
+   "clause": a SHORT label (2-6 words, e.g. "Indemnification", "Limitation of Liability"). NEVER put contract text here.
+   "risk_level": "High", "Medium", or "Low"
+   "reason": one sentence explaining why it is risky
    A typical contract has 5-10 risks. Return EVERY risk you find — do not summarise or combine them.
    Flag as High if: uncapped liability, worldwide non-compete over 1 year, unlimited indemnification, auto-renewal with short notice window.
    Flag as Medium if: broad IP assignment, one-sided termination, aggressive payment penalties.
@@ -396,7 +399,12 @@ Here are real lawyer-labeled example clauses from our legal dataset for referenc
 
 {examples}
 
-Analyze the following contract. Provide a plain-English summary (5-7 sentences), identify ALL risks as a JSON array (clause, risk_level of High/Medium/Low, reason), and check for these clause types: {clause_types_str}
+Analyze the following contract. Provide a plain-English summary (5-7 sentences), identify ALL risks as a JSON array, and check for these clause types: {clause_types_str}
+
+For each risk item use:
+  "clause": a SHORT label (2-6 words, e.g. "Indemnification", "Limitation of Liability", "Auto-Renewal"). NEVER put contract text here.
+  "risk_level": "High", "Medium", or "Low"
+  "reason": one sentence explaining why it is risky
 
 Flag as High if: uncapped liability, worldwide non-compete over 1 year, unlimited indemnification, auto-renewal with short notice window.
 Flag as Medium if: broad IP assignment, one-sided termination, aggressive payment penalties.
@@ -407,8 +415,9 @@ Contract to analyze:
 {contract_text}"""
 
 
-def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = GEMINI_MODEL) -> dict:
-    if _gemini_cache_name and model == GEMINI_MODEL:
+def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = GEMINI_MODEL, use_cache: bool = True) -> dict:
+    global _gemini_cache_name
+    if use_cache and _gemini_cache_name and model == GEMINI_MODEL:
         prompt = f"Analyze this contract:\n\n{contract_text}"
         config = genai_types.GenerateContentConfig(
             temperature=0,
@@ -416,13 +425,30 @@ def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = G
             response_schema=_RESPONSE_SCHEMA,
             cached_content=_gemini_cache_name,
         )
-    else:
-        prompt = _build_prompt(contract_text, similar_clauses)
-        config = genai_types.GenerateContentConfig(
-            temperature=0,
-            response_mime_type="application/json",
-            response_schema=_RESPONSE_SCHEMA,
-        )
+        try:
+            response = _genai_client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=config,
+            )
+            result = json.loads(response.text)
+            print(f"[GEMINI] risks={len(result.get('risks',[]))} clauses={len(result.get('clauses',[]))}")
+            return result
+        except Exception as e:
+            err = str(e).lower()
+            if "not found" in err or "expired" in err or "404" in err:
+                print(f"Gemini context cache gone (will retry without cache): {e}")
+                _gemini_cache_name = None
+            else:
+                print(f"Gemini call failed: {e}")
+                raise
+
+    prompt = _build_prompt(contract_text, similar_clauses)
+    config = genai_types.GenerateContentConfig(
+        temperature=0,
+        response_mime_type="application/json",
+        response_schema=_RESPONSE_SCHEMA,
+    )
     try:
         response = _genai_client.models.generate_content(
             model=model,
@@ -433,10 +459,7 @@ def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = G
         print(f"[GEMINI] risks={len(result.get('risks',[]))} clauses={len(result.get('clauses',[]))}")
         return result
     except Exception as e:
-        if "expired" in str(e).lower():
-            print(f"Gemini context cache expired — will fall back to RAG")
-        else:
-            print(f"Gemini call failed: {e}")
+        print(f"Gemini call failed: {e}")
         raise
 
 
@@ -725,7 +748,7 @@ async def analyse_guest(request: Request, file: UploadFile = File(...)):
     _log("analyse_start", actor="guest", ip=ip, filename=filename, size=len(content))
     t0       = time.time()
     text     = _extract_text(content, filename)
-    analysis = _run_rag_pipeline(text)
+    analysis = _call_gemini(text[:MAX_GEMINI_CHARS], [], model=GEMINI_GUEST_MODEL, use_cache=False)
     _log("analyse_complete", actor="guest", ip=ip, filename=filename, duration_ms=int((time.time()-t0)*1000))
     return {"filename": filename, "status": "success", "analysis": analysis}
 
@@ -749,7 +772,7 @@ async def analyse_guest_stream(request: Request, file: UploadFile = File(...)):
 
             yield _sse("Analysing with AI…")
             analysis = await loop.run_in_executor(
-                _executor, lambda: _call_gemini(text[:MAX_GEMINI_CHARS], [], model=GEMINI_GUEST_MODEL)
+                _executor, lambda: _call_gemini(text[:MAX_GEMINI_CHARS], [], model=GEMINI_GUEST_MODEL, use_cache=False)
             )
 
             yield _sse_result({"filename": filename, "status": "success", "analysis": analysis})

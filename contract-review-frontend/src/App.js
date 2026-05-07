@@ -45,10 +45,10 @@ function App() {
     <div className="App">
       <nav className="App-nav">
         <div className="App-nav-left">
-          <img src="/logo-icon-transparent.png" alt="Lease Lens" className="App-nav-logo" />
+          <img src="/logo-icon-only.png" alt="LegalEyes" className="App-nav-logo" />
           <div className="App-nav-brand">
-            <span className="App-nav-title">Lease Lens</span>
-            <span className="App-nav-tagline">Legal Review Document</span>
+            <span className="App-nav-title"><strong>LEGAL</strong>EYES</span>
+            <span className="App-nav-tagline">AI-Powered Contract Review</span>
           </div>
         </div>
 

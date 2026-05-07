@@ -11,10 +11,8 @@ export default function LoginPage() {
       <div className="login-card">
 
         <div className="login-brand">
-          <img src="/logo-icon-transparent.png" alt="Lease Lens" className="login-logo" />
-          <h1 className="login-title">Lease Lens</h1>
-          <p className="login-tagline">Legal Review Document</p>
-          <p className="login-subtitle">Review your lease before you sign.</p>
+          <img src="/logo-icon-transparent.png" alt="LegalEyes" className="login-logo" />
+          <p className="login-tagline">AI-Powered Contract Review</p>
         </div>
 
         <div className="login-options">
