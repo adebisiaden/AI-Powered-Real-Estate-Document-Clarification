@@ -75,7 +75,7 @@ export default function AnalysisResults({ result }) {
             {risksCount > 0 ? risks.map((risk, i) => (
               <div key={i} className={`risk-item risk-item--${(risk.risk_level || 'medium').toLowerCase()}`}>
                 <div className="risk-item-header">
-                  <strong>{risk.clause}</strong>
+                  <strong>{(risk.clause || '').length > 80 ? (risk.clause || '').slice(0, 80) + '…' : risk.clause}</strong>
                   <span className={`risk-badge risk-badge--${(risk.risk_level || 'medium').toLowerCase()}`}>
                     {risk.risk_level || 'Medium'}
                   </span>
