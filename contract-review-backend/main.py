@@ -533,6 +533,49 @@ def _gcs_client() -> storage.Client:
     return _gcs
 
 
+import hashlib
+
+def _filename_key(filename: str) -> str:
+    return hashlib.sha256(filename.lower().strip().encode()).hexdigest()
+
+def _cache_blob(user_id: str, key: str) -> str:
+    return f"users/{user_id}/cache/{key}.json"
+
+def _get_cached_by_filename(user_id: str, filename: str) -> Optional[dict]:
+    # Fast path: dedicated cache blob written on first analysis
+    try:
+        key = _filename_key(filename)
+        bucket = _gcs_client().bucket(BUCKET_NAME)
+        blob = bucket.blob(_cache_blob(user_id, key))
+        if blob.exists():
+            return json.loads(blob.download_as_bytes())
+    except Exception:
+        pass
+
+    # Slow path: scan history for a matching filename (covers records created before cache blobs existed)
+    try:
+        bucket = _gcs_client().bucket(BUCKET_NAME)
+        normalized = filename.lower().strip()
+        for b in bucket.list_blobs(prefix=f"users/{user_id}/analyses/"):
+            try:
+                data = json.loads(b.download_as_bytes())
+                if data.get("filename", "").lower().strip() == normalized:
+                    # Back-fill the cache blob so the next upload hits the fast path
+                    try:
+                        key = _filename_key(filename)
+                        bucket.blob(_cache_blob(user_id, key)).upload_from_string(
+                            json.dumps(data), content_type="application/json"
+                        )
+                    except Exception:
+                        pass
+                    return data
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    return None
+
 def _save_analysis(user_id: str, filename: str, analysis: dict) -> tuple:
     record_id = str(uuid.uuid4())
     record = {
@@ -544,6 +587,10 @@ def _save_analysis(user_id: str, filename: str, analysis: dict) -> tuple:
     }
     bucket = _gcs_client().bucket(BUCKET_NAME)
     bucket.blob(f"users/{user_id}/analyses/{record_id}.json").upload_from_string(
+        json.dumps(record), content_type="application/json"
+    )
+    key = _filename_key(filename)
+    bucket.blob(_cache_blob(user_id, key)).upload_from_string(
         json.dumps(record), content_type="application/json"
     )
     return record_id, record
@@ -589,6 +636,14 @@ def _delete_analysis(user_id: str, record_id: str) -> None:
     blob_name = f"users/{user_id}/analyses/{record_id}.json"
     try:
         bucket = _gcs_client().bucket(BUCKET_NAME)
+        # Read filename before deleting so we can clear the cache entry too
+        try:
+            data = json.loads(bucket.blob(blob_name).download_as_bytes())
+            filename = data.get("filename")
+            if filename:
+                bucket.blob(_cache_blob(user_id, _filename_key(filename))).delete()
+        except Exception:
+            pass
         bucket.blob(blob_name).delete()
     except Exception:
         raise HTTPException(status_code=404, detail="Record not found")
@@ -604,27 +659,6 @@ def _sse_result(data: dict) -> str:
 
 def _sse_error(msg: str) -> str:
     return f"data: {json.dumps({'type': 'error', 'message': msg})}\n\n"
-
-
-async def _bg_save(user_id: str, filename: str, record_id: str, analysis: dict):
-    def _do():
-        record = {
-            "record_id":  record_id,
-            "user_id":    user_id,
-            "filename":   filename,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "analysis":   analysis,
-        }
-        try:
-            bucket = _gcs_client().bucket(BUCKET_NAME)
-            bucket.blob(f"users/{user_id}/analyses/{record_id}.json").upload_from_string(
-                json.dumps(record), content_type="application/json"
-            )
-        except Exception as e:
-            print(f"Background save failed: {e}")
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(_executor, _do)
-
 
 
 
@@ -746,7 +780,10 @@ async def analyse_authenticated(
     if len(content) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail=f"File too large. Max: {MAX_UPLOAD_BYTES // (1024*1024)} MB")
     _log("analyse_start", actor=user_id, filename=filename, size=len(content))
-    t0        = time.time()
+    t0     = time.time()
+    cached = _get_cached_by_filename(user_id, filename)
+    if cached:
+        return {"record_id": cached["record_id"], "filename": cached["filename"], "status": "success", "analysis": cached["analysis"]}
     text      = _extract_text(content, filename)
     analysis  = _run_rag_pipeline(text)
     record_id, _ = _save_analysis(user_id, filename, analysis)
@@ -771,6 +808,17 @@ async def analyse_stream(
     async def generate():
         loop = asyncio.get_running_loop()
         try:
+            # Return existing analysis if same filename was seen before (no re-analysis, no duplicate)
+            cached = await loop.run_in_executor(_executor, lambda: _get_cached_by_filename(user_id, filename))
+            if cached:
+                yield _sse_result({
+                    "record_id": cached["record_id"],
+                    "filename":  cached["filename"],
+                    "status":    "success",
+                    "analysis":  cached["analysis"],
+                })
+                return
+
             yield _sse("Reading document…")
             text = await loop.run_in_executor(_executor, lambda: _extract_text(content, filename))
 
@@ -795,8 +843,9 @@ async def analyse_stream(
                     _executor, lambda: _call_gemini(text[:MAX_GEMINI_CHARS], similar)
                 )
 
-            record_id = str(uuid.uuid4())
-            asyncio.create_task(_bg_save(user_id, filename, record_id, analysis))
+            record_id, _ = await loop.run_in_executor(
+                _executor, lambda: _save_analysis(user_id, filename, analysis)
+            )
             yield _sse_result({
                 "record_id": record_id,
                 "filename":  filename,
