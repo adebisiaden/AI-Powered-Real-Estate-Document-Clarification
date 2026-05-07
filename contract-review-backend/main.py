@@ -228,11 +228,12 @@ When given a contract, analyze it and identify:
 
 1. A plain-English summary (5-7 sentences, no jargon).
 
-2. All risk items — each with a clause name, risk_level (High/Medium/Low), and one-sentence reason.
+2. ALL risk items as a JSON array — each with a clause name, risk_level (High/Medium/Low), and one-sentence reason.
+   A typical contract has 5-10 risks. Return EVERY risk you find — do not summarise or combine them.
    Flag as High if: uncapped liability, worldwide non-compete over 1 year, unlimited indemnification, auto-renewal with short notice window.
    Flag as Medium if: broad IP assignment, one-sided termination, aggressive payment penalties.
    Flag as Low if: standard governing law, normal confidentiality, typical warranty terms.
-   You MUST find ALL risks. Do not stop after the first.
+   IMPORTANT: Return a separate risk object for EACH issue found. Never return fewer than 3 risks for a real contract.
 
 3. Status for ALL of these clause types — {clause_types_str}
    For each: whether it was found, and the exact extracted text (or empty string).
@@ -394,12 +395,12 @@ Here are real lawyer-labeled example clauses from our legal dataset for referenc
 
 {examples}
 
-Analyze the following contract. Provide a plain-English summary (5-7 sentences), identify all risks (clause, risk_level of High/Medium/Low, reason), and check for these clause types: {clause_types_str}
+Analyze the following contract. Provide a plain-English summary (5-7 sentences), identify ALL risks as a JSON array (clause, risk_level of High/Medium/Low, reason), and check for these clause types: {clause_types_str}
 
 Flag as High if: uncapped liability, worldwide non-compete over 1 year, unlimited indemnification, auto-renewal with short notice window.
 Flag as Medium if: broad IP assignment, one-sided termination, aggressive payment penalties.
 Flag as Low if: standard governing law, normal confidentiality, typical warranty terms.
-You MUST identify ALL risks. Do not stop after the first.
+IMPORTANT: Return a separate risk object for EACH issue found. A typical contract has 5-10 risks. Never combine or summarise risks — list every single one.
 
 Contract to analyze:
 {contract_text}"""
