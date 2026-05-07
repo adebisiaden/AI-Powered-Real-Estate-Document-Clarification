@@ -49,7 +49,7 @@ PROJECT_ID        = os.getenv("GCP_PROJECT_ID")
 LOCATION          = os.getenv("GCP_LOCATION", "us-central1")
 BUCKET_NAME       = os.getenv("GCS_BUCKET_NAME")
 GEMINI_MODEL      = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-GEMINI_GUEST_MODEL = os.getenv("GEMINI_GUEST_MODEL", "gemini-2.0-flash")
+GEMINI_GUEST_MODEL = GEMINI_MODEL
 EMBED_MODEL       = "gemini-embedding-001"
 FIREBASE_PROJECT  = os.getenv("FIREBASE_PROJECT_ID", "contract-review-1e807")
 
