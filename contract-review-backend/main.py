@@ -159,8 +159,7 @@ async def check_bucket_security():
     if not BUCKET_NAME:
         return
     try:
-        gcs    = storage.Client(project=PROJECT_ID) if PROJECT_ID else storage.Client()
-        bucket = gcs.bucket(BUCKET_NAME)
+        bucket = _gcs_client().bucket(BUCKET_NAME)
         bucket.reload()
         if not bucket.iam_configuration.uniform_bucket_level_access_enabled:
             print(f"SECURITY WARNING: Uniform bucket-level access is OFF on gs://{BUCKET_NAME}")
@@ -186,8 +185,7 @@ async def load_embeddings():
 
     print("Loading CUAD/ACORD embeddings from GCS...")
     try:
-        gcs    = storage.Client(project=PROJECT_ID) if PROJECT_ID else storage.Client()
-        bucket = gcs.bucket(BUCKET_NAME)
+        bucket = _gcs_client().bucket(BUCKET_NAME)
 
         # Vectors (.npy) — write to temp file because np.load needs a path
         with tempfile.NamedTemporaryFile(suffix=".npy", delete=False) as tmp:
@@ -317,8 +315,7 @@ def _upload_to_gcs(content: bytes, dest_blob: str, content_type: str) -> None:
     if not BUCKET_NAME:
         raise HTTPException(status_code=500, detail="GCS_BUCKET_NAME is not configured")
     try:
-        gcs    = storage.Client(project=PROJECT_ID) if PROJECT_ID else storage.Client()
-        bucket = gcs.bucket(BUCKET_NAME)
+        bucket = _gcs_client().bucket(BUCKET_NAME)
         bucket.blob(dest_blob).upload_from_string(content, content_type=content_type)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"GCS upload failed: {exc!s}") from exc
@@ -523,8 +520,13 @@ def _verify_token(authorization: Optional[str]) -> str:
 
 # ── GCS history storage ─────────────────────────────────────────────────────────
 
-def _gcs_client():
-    return storage.Client(project=PROJECT_ID) if PROJECT_ID else storage.Client()
+_gcs: Optional[storage.Client] = None
+
+def _gcs_client() -> storage.Client:
+    global _gcs
+    if _gcs is None:
+        _gcs = storage.Client(project=PROJECT_ID) if PROJECT_ID else storage.Client()
+    return _gcs
 
 
 def _file_hash(content: bytes) -> str:
