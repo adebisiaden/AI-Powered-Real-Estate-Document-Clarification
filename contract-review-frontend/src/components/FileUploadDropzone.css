@@ -113,6 +113,11 @@
   cursor: not-allowed;
 }
 
+.upload-btn--uploaded:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
 .upload-btn:not(:disabled):hover {
   opacity: 0.88;
 }

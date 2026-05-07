@@ -360,7 +360,7 @@ export function FileUploadDropzone({ token }) {
 
           <button
             type="button"
-            className="upload-btn"
+            className={`upload-btn${uploadPhase === 'analyzing' ? ' upload-btn--uploaded' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
               upload();
@@ -368,8 +368,8 @@ export function FileUploadDropzone({ token }) {
             disabled={!file || uploading}
           >
             {uploadPhase === 'uploading' ? 'Uploading…'
-              : uploadPhase === 'analyzing' ? 'Analyzing…'
-              : uploadPhase === 'done' ? 'Uploaded ✓'
+              : uploadPhase === 'analyzing' ? '✓ Uploaded'
+              : uploadPhase === 'done' ? '✓ Uploaded'
               : 'Upload & Analyze'}
           </button>
 
