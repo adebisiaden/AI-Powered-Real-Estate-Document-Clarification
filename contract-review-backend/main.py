@@ -534,6 +534,26 @@ def _file_hash(content: bytes) -> str:
 def _cache_blob(user_id: str, file_hash: str) -> str:
     return f"users/{user_id}/cache/{file_hash}.json"
 
+def _guest_cache_blob(file_hash: str) -> str:
+    return f"guest/cache/{file_hash}.json"
+
+def _get_guest_cached(file_hash: str) -> Optional[dict]:
+    try:
+        bucket = _gcs_client().bucket(BUCKET_NAME)
+        return json.loads(bucket.blob(_guest_cache_blob(file_hash)).download_as_bytes())
+    except Exception:
+        return None
+
+def _save_guest_cache(file_hash: str, filename: str, analysis: dict) -> None:
+    try:
+        bucket = _gcs_client().bucket(BUCKET_NAME)
+        bucket.blob(_guest_cache_blob(file_hash)).upload_from_string(
+            json.dumps({"filename": filename, "analysis": analysis}),
+            content_type="application/json"
+        )
+    except Exception as e:
+        print(f"Guest cache save failed: {e}")
+
 
 def _get_cached(user_id: str, file_hash: str) -> Optional[dict]:
     try:
@@ -650,6 +670,12 @@ async def _bg_save(user_id: str, filename: str, file_hash: str, record_id: str, 
     await loop.run_in_executor(_executor, _do)
 
 
+async def _bg_save_guest(file_hash: str, filename: str, analysis: dict):
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(_executor, lambda: _save_guest_cache(file_hash, filename, analysis))
+
+
+
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -732,6 +758,12 @@ async def analyse_guest_stream(request: Request, file: UploadFile = File(...)):
         loop = asyncio.get_running_loop()
         try:
             yield _sse("Reading document…")
+            file_hash = _file_hash(content)
+            cached    = await loop.run_in_executor(_executor, lambda: _get_guest_cached(file_hash))
+            if cached:
+                yield _sse_result({"filename": cached["filename"], "status": "success", "analysis": cached["analysis"], "cached": True})
+                return
+
             text = await loop.run_in_executor(_executor, lambda: _extract_text(content, filename))
 
             yield _sse("Analysing with AI…")
@@ -739,6 +771,7 @@ async def analyse_guest_stream(request: Request, file: UploadFile = File(...)):
                 _executor, lambda: _call_gemini(text[:MAX_GEMINI_CHARS], [], model=GEMINI_GUEST_MODEL)
             )
 
+            asyncio.create_task(_bg_save_guest(file_hash, filename, analysis))
             yield _sse_result({"filename": filename, "status": "success", "analysis": analysis})
 
         except HTTPException as e:
