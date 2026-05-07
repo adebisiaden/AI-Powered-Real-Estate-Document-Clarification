@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import axios from 'axios';
+import { useCallback, useEffect, useRef, useState } from 'react'; // eslint-disable-line no-unused-vars
 import { jsPDF } from 'jspdf';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -26,26 +25,13 @@ function isAllowedFile(file) {
   return name.endsWith('.pdf') || name.endsWith('.docx');
 }
 
-function detailFromAxiosError(err) {
-  const status = err.response?.status;
-  const d = err.response?.data?.detail;
-  if (typeof d === 'string') {
-    if (status === 404 && d === 'Not Found') {
-      return `${d} (HTTP 404). Run the Phase 2 API from folder contract-review-backend: uvicorn main:app --reload --host 0.0.0.0 --port 8000`;
-    }
-    return d;
-  }
-  if (Array.isArray(d) && d[0]?.msg) return d.map((x) => x.msg).join('; ');
-  if (status) return `HTTP ${status}: ${err.message || 'Upload failed'}`;
-  return err.message || 'Upload failed';
-}
 
-export function FileUploadDropzone() {
+export function FileUploadDropzone({ token }) {
   const inputRef = useRef(null);
   const [file, setFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState('idle'); // 'idle'|'uploading'|'analyzing'|'done'
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab]   = useState('summary');
@@ -54,6 +40,45 @@ export function FileUploadDropzone() {
   const [pdfUrl, setPdfUrl]         = useState(null);
   const pdfContainerRef             = useRef(null);
   const [pdfContainerWidth, setPdfContainerWidth] = useState(0);
+  const [statusMsg, setStatusMsg] = useState('');
+  const [analyzeProgress, setAnalyzeProgress] = useState(0);
+
+  // Crawling progress bar on right panel while analyzing
+  useEffect(() => {
+    if (uploadPhase !== 'analyzing') { if (uploadPhase !== 'done') setAnalyzeProgress(0); return; }
+    setAnalyzeProgress(0);
+    const timer = setInterval(() => {
+      setAnalyzeProgress(prev => prev >= 85 ? prev : prev + (85 - prev) * 0.06);
+    }, 400);
+    return () => clearInterval(timer);
+  }, [uploadPhase]);
+
+  useEffect(() => {
+    if (uploadPhase === 'done') setAnalyzeProgress(100);
+  }, [uploadPhase]);
+
+  const ANIM_STEPS = [
+    'Uploading…',
+    'Reading document…',
+    'Finding relevant clauses…',
+    'Analysing with AI…',
+    'Reading contract clauses…',
+    'Assessing legal risks…',
+    'Writing summary…',
+    'Almost done…',
+  ];
+
+  useEffect(() => {
+    if (!uploading) { setStatusMsg(''); return; }
+    let i = 0;
+    setStatusMsg(ANIM_STEPS[0]);
+    const timer = setInterval(() => {
+      i = Math.min(i + 1, ANIM_STEPS.length - 1);
+      setStatusMsg(ANIM_STEPS[i]);
+    }, 5000);
+    return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploading]);
 
   useEffect(() => {
     if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
@@ -82,7 +107,7 @@ export function FileUploadDropzone() {
   const resetMessages = useCallback(() => {
     setResult(null);
     setError(null);
-    setProgress(0);
+    setStatusMsg('');
   }, []);
 
   const pickFile = useCallback(
@@ -96,6 +121,7 @@ export function FileUploadDropzone() {
       setFile(f);
       setError(null);
       setResult(null);
+      setUploadPhase('idle');
     },
     [setError, setFile, setResult]
   );
@@ -136,24 +162,49 @@ export function FileUploadDropzone() {
     if (!file) return;
     resetMessages();
     setUploading(true);
+    setUploadPhase('uploading');
     const formData = new FormData();
     formData.append('file', file);
 
+    const endpoint = token ? apiUrl('/analyse/stream') : apiUrl('/analyse/guest/stream');
+    const headers  = token ? { Authorization: `Bearer ${token}` } : {};
+
     try {
-      const { data } = await axios.post(apiUrl('/upload'), formData, {
-        onUploadProgress: (ev) => {
-          if (ev.total) setProgress(Math.round((ev.loaded * 100) / ev.total));
-          else setProgress(0);
-        },
-      });
-      setResult(data);
-      console.log('Full API response:', data);
-      console.log('Risks array:', data?.analysis?.risks);
-      setProgress(100);
-      setActiveTab('summary');
+      const res = await fetch(endpoint, { method: 'POST', headers, body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let done = false;
+      while (!done) {
+        const { done: streamDone, value } = await reader.read();
+        if (streamDone) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = JSON.parse(line.slice(6));
+          if (data.type === 'status') {
+            setUploadPhase('analyzing');
+            setStatusMsg(data.message);
+          } else if (data.type === 'done') {
+            setUploadPhase('done');
+            setResult(data);
+            setActiveTab('summary');
+            reader.cancel().catch(() => {});
+            done = true;
+            break;
+          } else if (data.type === 'error') {
+            throw new Error(data.message);
+          }
+        }
+      }
     } catch (err) {
-      setError(detailFromAxiosError(err));
-      setProgress(0);
+      setError(err.message || 'Upload failed');
     } finally {
       setUploading(false);
     }
@@ -309,30 +360,18 @@ export function FileUploadDropzone() {
 
           <button
             type="button"
-            className="upload-btn"
+            className={`upload-btn${uploadPhase === 'analyzing' ? ' upload-btn--uploaded' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
               upload();
             }}
             disabled={!file || uploading}
           >
-            {uploading ? 'Analyzing…' : 'Upload & Analyze'}
+            {uploadPhase === 'uploading' ? 'Uploading…'
+              : uploadPhase === 'analyzing' ? '✓ Uploaded'
+              : uploadPhase === 'done' ? '✓ Uploaded'
+              : 'Upload & Analyze'}
           </button>
-
-          {uploading && (
-            <div className="progress-wrap" aria-live="polite">
-              <div className="progress-bar">
-                <div
-                  className="progress-bar-fill"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <span className="progress-label">{progress}%</span>
-              {progress === 100 && (
-                <span className="analyzing-label">Analyzing with Gemini...</span>
-              )}
-            </div>
-          )}
 
           {result?.status === 'success' && (
             <div className="status-complete" role="status">
@@ -511,6 +550,17 @@ export function FileUploadDropzone() {
               )}
             </div>
           </>
+        ) : uploadPhase === 'analyzing' ? (
+          <div className="panel-analyzing" aria-live="polite">
+            <span className="panel-analyzing-msg">{statusMsg}</span>
+            <div className="panel-analyzing-progress">
+              <div className="panel-analyzing-progress-fill" style={{ width: `${analyzeProgress}%` }} />
+            </div>
+            <span className="panel-analyzing-pct">{Math.round(analyzeProgress)}%</span>
+            <div className="panel-analyzing-dots">
+              <span /><span /><span />
+            </div>
+          </div>
         ) : (
           <div className="panel-empty">
             <p>Upload and analyze a contract to see results here.</p>

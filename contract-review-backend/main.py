@@ -3,25 +3,36 @@ import json
 import os
 import tempfile
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
 from docx import Document
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from google.cloud import storage
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
 from pydantic import BaseModel
 from PyPDF2 import PdfReader
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+import asyncio
+import logging
+import time
+from concurrent.futures import ThreadPoolExecutor
+
+_executor = ThreadPoolExecutor(max_workers=4)
 
 import vertexai
 from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 from google import genai as genai_sdk
 from google.genai import types as genai_types
-
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
@@ -35,11 +46,15 @@ if _creds:
         _p = (BASE_DIR / _p).resolve()
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(_p)
 
-PROJECT_ID   = os.getenv("GCP_PROJECT_ID")
-LOCATION     = os.getenv("GCP_LOCATION", "us-central1")
-BUCKET_NAME  = os.getenv("GCS_BUCKET_NAME")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-EMBED_MODEL  = "gemini-embedding-001"
+PROJECT_ID        = os.getenv("GCP_PROJECT_ID")
+LOCATION          = os.getenv("GCP_LOCATION", "us-central1")
+BUCKET_NAME       = os.getenv("GCS_BUCKET_NAME")
+GEMINI_MODEL      = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_GUEST_MODEL = GEMINI_MODEL
+EMBED_MODEL       = "gemini-embedding-001"
+FIREBASE_PROJECT  = os.getenv("FIREBASE_PROJECT_ID", "contract-review-1e807")
+
+_auth_request = google_requests.Request()
 
 ALLOWED_EXTENSIONS = {".pdf", ".docx"}
 MAX_UPLOAD_BYTES   = 20 * 1024 * 1024  # 20 MB
@@ -57,6 +72,40 @@ _genai_client = genai_sdk.Client(vertexai=True, project=PROJECT_ID, location=LOC
 # Embeddings loaded once at startup from GCS
 _clauses: list[dict] = []
 _vectors: Optional[np.ndarray] = None
+_gemini_cache_name: Optional[str] = None
+
+# ── Response schema (structured output) ────────────────────────────────────────
+_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "summary": {"type": "string"},
+        "risks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "clause":     {"type": "string"},
+                    "risk_level": {"type": "string", "enum": ["High", "Medium", "Low"]},
+                    "reason":     {"type": "string"},
+                },
+                "required": ["clause", "risk_level", "reason"],
+            },
+        },
+        "clauses": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "clause_type": {"type": "string"},
+                    "text":        {"type": "string"},
+                    "found":       {"type": "boolean"},
+                },
+                "required": ["clause_type", "text", "found"],
+            },
+        },
+    },
+    "required": ["summary", "risks", "clauses"],
+}
 
 # All 41 CUAD clause types the prompt checks for
 CLAUSE_TYPES = [
@@ -78,6 +127,18 @@ CLAUSE_TYPES = [
 
 app = FastAPI(title="Contract Review API", version="1.0.0")
 
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Audit logger — emits one JSON line per security-relevant event
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+_audit = logging.getLogger("audit")
+
+def _log(event: str, **kwargs):
+    _audit.info(json.dumps({"event": event, "ts": datetime.now(timezone.utc).isoformat(), **kwargs}))
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -95,8 +156,29 @@ app.add_middleware(
 # ── Startup: load CUAD/ACORD embeddings from GCS ──────────────────────────────
 
 @app.on_event("startup")
+async def check_bucket_security():
+    if not BUCKET_NAME:
+        return
+    try:
+        bucket = _gcs_client().bucket(BUCKET_NAME)
+        bucket.reload()
+        if not bucket.iam_configuration.uniform_bucket_level_access_enabled:
+            print(f"SECURITY WARNING: Uniform bucket-level access is OFF on gs://{BUCKET_NAME}")
+            print(f"  Fix: gcloud storage buckets update gs://{BUCKET_NAME} --uniform-bucket-level-access")
+        else:
+            print(f"[security] Uniform bucket-level access: OK")
+        if bucket.iam_configuration.public_access_prevention != "enforced":
+            print(f"SECURITY WARNING: Public access prevention is not enforced on gs://{BUCKET_NAME}")
+            print(f"  Fix: gcloud storage buckets update gs://{BUCKET_NAME} --public-access-prevention=enforced")
+        else:
+            print(f"[security] Public access prevention: OK")
+    except Exception as exc:
+        print(f"Could not verify bucket security settings: {exc}")
+
+
+@app.on_event("startup")
 async def load_embeddings():
-    global _clauses, _vectors
+    global _clauses, _vectors, _gemini_cache_name
 
     if not BUCKET_NAME:
         print("WARNING: GCS_BUCKET_NAME not set — RAG disabled")
@@ -104,8 +186,7 @@ async def load_embeddings():
 
     print("Loading CUAD/ACORD embeddings from GCS...")
     try:
-        gcs    = storage.Client(project=PROJECT_ID) if PROJECT_ID else storage.Client()
-        bucket = gcs.bucket(BUCKET_NAME)
+        bucket = _gcs_client().bucket(BUCKET_NAME)
 
         # Vectors (.npy) — write to temp file because np.load needs a path
         with tempfile.NamedTemporaryFile(suffix=".npy", delete=False) as tmp:
@@ -122,6 +203,59 @@ async def load_embeddings():
     except Exception as exc:
         print(f"ERROR loading embeddings from GCS: {exc}")
         print("Server will start but /analyze will return 503 until embeddings load.")
+        return
+
+    # Build Gemini context cache with all CUAD/ACORD examples (one per clause type)
+    try:
+        by_type: dict = {}
+        for c in _clauses:
+            t = c.get("type", "Unknown")
+            if t not in by_type:
+                by_type[t] = c
+
+        examples_text = "\n\n".join(
+            f"Type: {c.get('type','Unknown')}\nExample: {c.get('text','')[:400]}"
+            for c in by_type.values()
+        )
+        clause_types_str = ", ".join(CLAUSE_TYPES)
+
+        cached_system = f"""You are a legal contract review assistant trained on expert-annotated legal datasets (CUAD/ACORD).
+
+Here are lawyer-labeled example clauses from our dataset for reference:
+
+{examples_text}
+
+When given a contract, analyze it and identify:
+
+1. A plain-English summary (5-7 sentences, no jargon).
+
+2. ALL risk items as a JSON array — each with a clause name, risk_level (High/Medium/Low), and one-sentence reason.
+   A typical contract has 5-10 risks. Return EVERY risk you find — do not summarise or combine them.
+   Flag as High if: uncapped liability, worldwide non-compete over 1 year, unlimited indemnification, auto-renewal with short notice window.
+   Flag as Medium if: broad IP assignment, one-sided termination, aggressive payment penalties.
+   Flag as Low if: standard governing law, normal confidentiality, typical warranty terms.
+   IMPORTANT: Return a separate risk object for EACH issue found. Never return fewer than 3 risks for a real contract.
+
+3. Status for ALL of these clause types — {clause_types_str}
+   For each: whether it was found, and the exact extracted text (or empty string).
+"""
+
+        cache = _genai_client.caches.create(
+            model=GEMINI_MODEL,
+            config=genai_types.CreateCachedContentConfig(
+                contents=[genai_types.Content(
+                    role="user",
+                    parts=[genai_types.Part(text=cached_system)],
+                )],
+                ttl="3600s",
+                display_name="cuad-acord-system-prompt",
+            ),
+        )
+        _gemini_cache_name = cache.name
+        print(f"Gemini context cache created: {_gemini_cache_name}")
+    except Exception as exc:
+        print(f"Context caching unavailable (will use standard RAG): {exc}")
+        _gemini_cache_name = None
 
 
 # ── Schemas ────────────────────────────────────────────────────────────────────
@@ -183,8 +317,7 @@ def _upload_to_gcs(content: bytes, dest_blob: str, content_type: str) -> None:
     if not BUCKET_NAME:
         raise HTTPException(status_code=500, detail="GCS_BUCKET_NAME is not configured")
     try:
-        gcs    = storage.Client(project=PROJECT_ID) if PROJECT_ID else storage.Client()
-        bucket = gcs.bucket(BUCKET_NAME)
+        bucket = _gcs_client().bucket(BUCKET_NAME)
         bucket.blob(dest_blob).upload_from_string(content, content_type=content_type)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"GCS upload failed: {exc!s}") from exc
@@ -250,6 +383,7 @@ def _retrieve_top_clauses(chunk_vectors: np.ndarray) -> list[dict]:
 
 
 def _build_prompt(contract_text: str, similar_clauses: list[dict]) -> str:
+    """Fallback prompt used when context cache is unavailable."""
     examples = "\n\n".join(
         f"Type: {c.get('type', 'Unknown')}\nExample: {c.get('text', '')[:300]}"
         for c in similar_clauses
@@ -262,46 +396,48 @@ Here are real lawyer-labeled example clauses from our legal dataset for referenc
 
 {examples}
 
-Using these examples as reference, analyze the following contract and return a JSON object with exactly these three keys:
+Analyze the following contract. Provide a plain-English summary (5-7 sentences), identify ALL risks as a JSON array (clause, risk_level of High/Medium/Low, reason), and check for these clause types: {clause_types_str}
 
-1. "summary": Plain English summary, 5-7 sentences, no legal jargon.
-
-2. "risks": List of risk items, each with:
-   - "clause": clause type name
-   - "risk_level": exactly "High", "Medium", or "Low"
-   - "reason": one sentence explanation
-   Flag as High if: uncapped liability, worldwide non-compete over 1 year, unlimited indemnification, auto-renewal with short notice window.
-   Flag as Medium if: broad IP assignment, one-sided termination, aggressive payment penalties.
-   Flag as Low if: standard governing law, normal confidentiality, typical warranty terms.
-
-3. "clauses": Check for ALL of these clause types and return found status for each: {clause_types_str}
-   For each return: {{"clause_type": "...", "text": "exact extracted text or empty string", "found": true or false}}
-
-You MUST identify ALL risks present in the contract. Do not stop after finding one risk. Check every clause type for risk. Return at minimum all High and Medium risk items found.
-
-Return ONLY valid JSON. No markdown. No extra text.
+Flag as High if: uncapped liability, worldwide non-compete over 1 year, unlimited indemnification, auto-renewal with short notice window.
+Flag as Medium if: broad IP assignment, one-sided termination, aggressive payment penalties.
+Flag as Low if: standard governing law, normal confidentiality, typical warranty terms.
+IMPORTANT: Return a separate risk object for EACH issue found. A typical contract has 5-10 risks. Never combine or summarise risks — list every single one.
 
 Contract to analyze:
 {contract_text}"""
 
 
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
-_executor = ThreadPoolExecutor(max_workers=4)
-
-def _analyze_single_chunk(chunk_text: str, similar_clauses: list[dict]) -> dict:
-    prompt = _build_prompt(chunk_text, similar_clauses)
+def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = GEMINI_MODEL) -> dict:
+    if _gemini_cache_name and model == GEMINI_MODEL:
+        prompt = f"Analyze this contract:\n\n{contract_text}"
+        config = genai_types.GenerateContentConfig(
+            temperature=0,
+            response_mime_type="application/json",
+            response_schema=_RESPONSE_SCHEMA,
+            cached_content=_gemini_cache_name,
+        )
+    else:
+        prompt = _build_prompt(contract_text, similar_clauses)
+        config = genai_types.GenerateContentConfig(
+            temperature=0,
+            response_mime_type="application/json",
+            response_schema=_RESPONSE_SCHEMA,
+        )
     try:
         response = _genai_client.models.generate_content(
-            model=GEMINI_MODEL,
+            model=model,
             contents=prompt,
-            config=genai_types.GenerateContentConfig(temperature=0),
+            config=config,
         )
-        raw = response.text.strip().removeprefix("```json").removesuffix("```").strip()
-        return json.loads(raw)
-    except Exception:
-        return {"clauses": [], "risks": [], "summary": ""}
+        result = json.loads(response.text)
+        print(f"[GEMINI] risks={len(result.get('risks',[]))} clauses={len(result.get('clauses',[]))}")
+        return result
+    except Exception as e:
+        if "expired" in str(e).lower():
+            print(f"Gemini context cache expired — will fall back to RAG")
+        else:
+            print(f"Gemini call failed: {e}")
+        raise
 
 
 def _merge_results(results: list[dict]) -> dict:
@@ -338,49 +474,193 @@ def _merge_results(results: list[dict]) -> dict:
     }
 
 
+MAX_GEMINI_CHARS = 900_000  # ~225k tokens, well within Gemini 2.5 Flash's 1M limit
+
+
 def _run_rag_pipeline(text: str) -> dict:
     import time
-    if _vectors is None or not _clauses:
-        raise HTTPException(status_code=503, detail="Service starting up, retry in 30s")
-
     if not text or not text.strip():
         raise HTTPException(status_code=400, detail="Contract text is empty")
 
     t0 = time.time()
 
-    # Step 1 — chunk
-    chunks = _chunk_text(text)
-    print(f"[TIMING] Chunking: {time.time() - t0:.2f}s | {len(chunks)} chunks")
+    if _gemini_cache_name:
+        try:
+            result = _call_gemini(text[:MAX_GEMINI_CHARS], [])
+            print(f"[TIMING] Gemini call with context cache: {time.time() - t0:.2f}s")
+            return result
+        except Exception:
+            pass  # cache expired or failed — fall through to RAG
 
-    # Step 2 — embed chunks
-    t1 = time.time()
+    # Fallback: dynamic RAG (embed → retrieve → generate)
+    if _vectors is None or not _clauses:
+        raise HTTPException(status_code=503, detail="Service starting up, retry in 30s")
+
+    sample = text[:CHUNK_WORDS * 6]
     try:
-        chunk_vectors = _embed_chunks(chunks)
+        sample_vector = _embed_chunks([sample])
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Embedding failed: {exc!s}") from exc
-    print(f"[TIMING] Embedding: {time.time() - t1:.2f}s")
-
-    # Step 3 — retrieve top CUAD/ACORD matches
-    t2 = time.time()
-    similar = _retrieve_top_clauses(chunk_vectors)
-    print(f"[TIMING] RAG similarity search: {time.time() - t2:.2f}s")
-
-    # Step 4 — analyze each chunk in parallel
-    t3 = time.time()
-    futures = [
-        _executor.submit(_analyze_single_chunk, chunk, similar)
-        for chunk in chunks
-    ]
-    chunk_results = [f.result() for f in futures]
-    print(f"[TIMING] Gemini calls (parallel): {time.time() - t3:.2f}s | {len(chunks)} chunks")
-
-    # Step 5 — merge
-    t4 = time.time()
-    result = _merge_results(chunk_results)
-    print(f"[TIMING] Merge: {time.time() - t4:.2f}s")
-
-    print(f"[TIMING] Total pipeline: {time.time() - t0:.2f}s")
+    similar = _retrieve_top_clauses(sample_vector)
+    result  = _call_gemini(text[:MAX_GEMINI_CHARS], similar)
+    print(f"[TIMING] RAG pipeline (no cache): {time.time() - t0:.2f}s")
     return result
+
+
+# ── Auth helpers ───────────────────────────────────────────────────────────────
+
+def _verify_token(authorization: Optional[str]) -> str:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = authorization[7:]
+    try:
+        payload = google_id_token.verify_firebase_token(
+            token, _auth_request, audience=FIREBASE_PROJECT
+        )
+        return payload["sub"]
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {exc}") from exc
+
+
+# ── GCS history storage ─────────────────────────────────────────────────────────
+
+_gcs: Optional[storage.Client] = None
+
+def _gcs_client() -> storage.Client:
+    global _gcs
+    if _gcs is None:
+        _gcs = storage.Client(project=PROJECT_ID) if PROJECT_ID else storage.Client()
+    return _gcs
+
+
+import hashlib
+
+def _filename_key(filename: str) -> str:
+    return hashlib.sha256(filename.lower().strip().encode()).hexdigest()
+
+def _cache_blob(user_id: str, key: str) -> str:
+    return f"users/{user_id}/cache/{key}.json"
+
+def _get_cached_by_filename(user_id: str, filename: str) -> Optional[dict]:
+    # Fast path: dedicated cache blob written on first analysis
+    try:
+        key = _filename_key(filename)
+        bucket = _gcs_client().bucket(BUCKET_NAME)
+        blob = bucket.blob(_cache_blob(user_id, key))
+        if blob.exists():
+            return json.loads(blob.download_as_bytes())
+    except Exception:
+        pass
+
+    # Slow path: scan history for a matching filename (covers records created before cache blobs existed)
+    try:
+        bucket = _gcs_client().bucket(BUCKET_NAME)
+        normalized = filename.lower().strip()
+        for b in bucket.list_blobs(prefix=f"users/{user_id}/analyses/"):
+            try:
+                data = json.loads(b.download_as_bytes())
+                if data.get("filename", "").lower().strip() == normalized:
+                    # Back-fill the cache blob so the next upload hits the fast path
+                    try:
+                        key = _filename_key(filename)
+                        bucket.blob(_cache_blob(user_id, key)).upload_from_string(
+                            json.dumps(data), content_type="application/json"
+                        )
+                    except Exception:
+                        pass
+                    return data
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    return None
+
+def _save_analysis(user_id: str, filename: str, analysis: dict) -> tuple:
+    record_id = str(uuid.uuid4())
+    record = {
+        "record_id":  record_id,
+        "user_id":    user_id,
+        "filename":   filename,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "analysis":   analysis,
+    }
+    bucket = _gcs_client().bucket(BUCKET_NAME)
+    bucket.blob(f"users/{user_id}/analyses/{record_id}.json").upload_from_string(
+        json.dumps(record), content_type="application/json"
+    )
+    key = _filename_key(filename)
+    bucket.blob(_cache_blob(user_id, key)).upload_from_string(
+        json.dumps(record), content_type="application/json"
+    )
+    return record_id, record
+
+
+def _list_analyses(user_id: str) -> list:
+    blobs = _gcs_client().bucket(BUCKET_NAME).list_blobs(
+        prefix=f"users/{user_id}/analyses/"
+    )
+    results = []
+    for blob in blobs:
+        try:
+            data  = json.loads(blob.download_as_bytes())
+            risks = data.get("analysis", {}).get("risks", [])
+            level = (
+                "High"   if any(r.get("risk_level") == "High"   for r in risks) else
+                "Medium" if any(r.get("risk_level") == "Medium" for r in risks) else
+                "Low"
+            )
+            results.append({
+                "record_id":  data["record_id"],
+                "filename":   data["filename"],
+                "created_at": data["created_at"],
+                "risk_level": level,
+            })
+        except Exception:
+            continue
+    results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return results
+
+
+def _get_analysis(user_id: str, record_id: str) -> dict:
+    blob_name = f"users/{user_id}/analyses/{record_id}.json"
+    try:
+        return json.loads(
+            _gcs_client().bucket(BUCKET_NAME).blob(blob_name).download_as_bytes()
+        )
+    except Exception:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+
+def _delete_analysis(user_id: str, record_id: str) -> None:
+    blob_name = f"users/{user_id}/analyses/{record_id}.json"
+    try:
+        bucket = _gcs_client().bucket(BUCKET_NAME)
+        # Read filename before deleting so we can clear the cache entry too
+        try:
+            data = json.loads(bucket.blob(blob_name).download_as_bytes())
+            filename = data.get("filename")
+            if filename:
+                bucket.blob(_cache_blob(user_id, _filename_key(filename))).delete()
+        except Exception:
+            pass
+        bucket.blob(blob_name).delete()
+    except Exception:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+
+# ── SSE helpers ────────────────────────────────────────────────────────────────
+
+def _sse(msg: str) -> str:
+    return f"data: {json.dumps({'type': 'status', 'message': msg})}\n\n"
+
+def _sse_result(data: dict) -> str:
+    return f"data: {json.dumps({'type': 'done', **data})}\n\n"
+
+def _sse_error(msg: str) -> str:
+    return f"data: {json.dumps({'type': 'error', 'message': msg})}\n\n"
+
+
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
@@ -429,3 +709,179 @@ async def upload(file: UploadFile = File(...)):
         "text":     text,
         "analysis": analysis,
     }
+
+
+@app.post("/analyse/guest")
+@limiter.limit("5/minute;20/hour")
+async def analyse_guest(request: Request, file: UploadFile = File(...)):
+    filename = _original_filename(file)
+    _validate_type(filename)
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty file")
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail=f"File too large. Max: {MAX_UPLOAD_BYTES // (1024*1024)} MB")
+    ip = request.client.host if request.client else "unknown"
+    _log("analyse_start", actor="guest", ip=ip, filename=filename, size=len(content))
+    t0       = time.time()
+    text     = _extract_text(content, filename)
+    analysis = _run_rag_pipeline(text)
+    _log("analyse_complete", actor="guest", ip=ip, filename=filename, duration_ms=int((time.time()-t0)*1000))
+    return {"filename": filename, "status": "success", "analysis": analysis}
+
+
+@app.post("/analyse/guest/stream")
+@limiter.limit("5/minute;20/hour")
+async def analyse_guest_stream(request: Request, file: UploadFile = File(...)):
+    filename = _original_filename(file)
+    _validate_type(filename)
+    content  = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty file")
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail=f"File too large. Max: {MAX_UPLOAD_BYTES // (1024*1024)} MB")
+
+    async def generate():
+        loop = asyncio.get_running_loop()
+        try:
+            yield _sse("Reading document…")
+            text = await loop.run_in_executor(_executor, lambda: _extract_text(content, filename))
+
+            yield _sse("Analysing with AI…")
+            analysis = await loop.run_in_executor(
+                _executor, lambda: _call_gemini(text[:MAX_GEMINI_CHARS], [], model=GEMINI_GUEST_MODEL)
+            )
+
+            yield _sse_result({"filename": filename, "status": "success", "analysis": analysis})
+
+        except HTTPException as e:
+            yield _sse_error(e.detail)
+        except Exception as e:
+            yield _sse_error(str(e))
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.post("/analyse")
+async def analyse_authenticated(
+    file: UploadFile = File(...),
+    authorization: Optional[str] = Header(None),
+):
+    user_id  = _verify_token(authorization)
+    filename = _original_filename(file)
+    _validate_type(filename)
+    content  = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty file")
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail=f"File too large. Max: {MAX_UPLOAD_BYTES // (1024*1024)} MB")
+    _log("analyse_start", actor=user_id, filename=filename, size=len(content))
+    t0     = time.time()
+    cached = _get_cached_by_filename(user_id, filename)
+    if cached:
+        return {"record_id": cached["record_id"], "filename": cached["filename"], "status": "success", "analysis": cached["analysis"]}
+    text      = _extract_text(content, filename)
+    analysis  = _run_rag_pipeline(text)
+    record_id, _ = _save_analysis(user_id, filename, analysis)
+    _log("analyse_complete", actor=user_id, filename=filename, record_id=record_id, duration_ms=int((time.time()-t0)*1000))
+    return {"record_id": record_id, "filename": filename, "status": "success", "analysis": analysis}
+
+
+@app.post("/analyse/stream")
+async def analyse_stream(
+    file: UploadFile = File(...),
+    authorization: Optional[str] = Header(None),
+):
+    user_id  = _verify_token(authorization)
+    filename = _original_filename(file)
+    _validate_type(filename)
+    content  = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty file")
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail=f"File too large. Max: {MAX_UPLOAD_BYTES // (1024*1024)} MB")
+
+    async def generate():
+        loop = asyncio.get_running_loop()
+        try:
+            # Return existing analysis if same filename was seen before (no re-analysis, no duplicate)
+            cached = await loop.run_in_executor(_executor, lambda: _get_cached_by_filename(user_id, filename))
+            if cached:
+                yield _sse_result({
+                    "record_id": cached["record_id"],
+                    "filename":  cached["filename"],
+                    "status":    "success",
+                    "analysis":  cached["analysis"],
+                })
+                return
+
+            yield _sse("Reading document…")
+            text = await loop.run_in_executor(_executor, lambda: _extract_text(content, filename))
+
+            analysis = None
+            if _gemini_cache_name:
+                try:
+                    yield _sse("Analysing with AI…")
+                    analysis = await loop.run_in_executor(
+                        _executor, lambda: _call_gemini(text[:MAX_GEMINI_CHARS], [])
+                    )
+                except Exception:
+                    analysis = None  # cache expired — fall through to RAG
+
+            if analysis is None:
+                yield _sse("Finding relevant clauses…")
+                def _rag():
+                    vec = _embed_chunks([text[:CHUNK_WORDS * 6]])
+                    return _retrieve_top_clauses(vec)
+                similar = await loop.run_in_executor(_executor, _rag)
+                yield _sse("Analysing with AI…")
+                analysis = await loop.run_in_executor(
+                    _executor, lambda: _call_gemini(text[:MAX_GEMINI_CHARS], similar)
+                )
+
+            record_id, _ = await loop.run_in_executor(
+                _executor, lambda: _save_analysis(user_id, filename, analysis)
+            )
+            yield _sse_result({
+                "record_id": record_id,
+                "filename":  filename,
+                "status":    "success",
+                "analysis":  analysis,
+            })
+
+        except HTTPException as e:
+            yield _sse_error(e.detail)
+        except Exception as e:
+            yield _sse_error(str(e))
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.get("/history")
+async def get_history(authorization: Optional[str] = Header(None)):
+    user_id = _verify_token(authorization)
+    _log("history_list", actor=user_id)
+    return {"analyses": _list_analyses(user_id)}
+
+
+@app.get("/history/{record_id}")
+async def get_record(record_id: str, authorization: Optional[str] = Header(None)):
+    user_id = _verify_token(authorization)
+    _log("history_get", actor=user_id, record_id=record_id)
+    return _get_analysis(user_id, record_id)
+
+
+@app.delete("/history/{record_id}")
+async def delete_record(record_id: str, authorization: Optional[str] = Header(None)):
+    user_id = _verify_token(authorization)
+    _delete_analysis(user_id, record_id)
+    _log("history_delete", actor=user_id, record_id=record_id)
+    return {"status": "deleted"}
