@@ -49,6 +49,7 @@ PROJECT_ID        = os.getenv("GCP_PROJECT_ID")
 LOCATION          = os.getenv("GCP_LOCATION", "us-central1")
 BUCKET_NAME       = os.getenv("GCS_BUCKET_NAME")
 GEMINI_MODEL      = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_GUEST_MODEL = os.getenv("GEMINI_GUEST_MODEL", "gemini-2.0-flash")
 EMBED_MODEL       = "gemini-embedding-001"
 FIREBASE_PROJECT  = os.getenv("FIREBASE_PROJECT_ID", "contract-review-1e807")
 
@@ -412,9 +413,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 _executor = ThreadPoolExecutor(max_workers=4)
 
-def _call_gemini(contract_text: str, similar_clauses: list[dict]) -> dict:
-    if _gemini_cache_name:
-        # Context cache has all examples — just send the contract text
+def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = GEMINI_MODEL) -> dict:
+    if _gemini_cache_name and model == GEMINI_MODEL:
         prompt = f"Analyze this contract:\n\n{contract_text}"
         config = genai_types.GenerateContentConfig(
             temperature=0,
@@ -431,7 +431,7 @@ def _call_gemini(contract_text: str, similar_clauses: list[dict]) -> dict:
         )
     try:
         response = _genai_client.models.generate_content(
-            model=GEMINI_MODEL,
+            model=model,
             contents=prompt,
             config=config,
         )
@@ -739,21 +739,10 @@ async def analyse_guest_stream(request: Request, file: UploadFile = File(...)):
             yield _sse("Reading document…")
             text = await loop.run_in_executor(_executor, lambda: _extract_text(content, filename))
 
-            if _gemini_cache_name:
-                yield _sse("Analysing with AI…")
-                analysis = await loop.run_in_executor(
-                    _executor, lambda: _call_gemini(text[:MAX_GEMINI_CHARS], [])
-                )
-            else:
-                yield _sse("Finding relevant clauses…")
-                def _rag():
-                    vec = _embed_chunks([text[:CHUNK_WORDS * 6]])
-                    return _retrieve_top_clauses(vec)
-                similar = await loop.run_in_executor(_executor, _rag)
-                yield _sse("Analysing with AI…")
-                analysis = await loop.run_in_executor(
-                    _executor, lambda: _call_gemini(text[:MAX_GEMINI_CHARS], similar)
-                )
+            yield _sse("Analysing with AI…")
+            analysis = await loop.run_in_executor(
+                _executor, lambda: _call_gemini(text[:MAX_GEMINI_CHARS], [], model=GEMINI_GUEST_MODEL)
+            )
 
             yield _sse_result({"filename": filename, "status": "success", "analysis": analysis})
 
