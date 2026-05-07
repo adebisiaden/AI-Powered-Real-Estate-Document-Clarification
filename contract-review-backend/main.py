@@ -11,7 +11,7 @@ from typing import Optional
 import numpy as np
 from docx import Document
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Header, HTTPException, Query, Request, UploadFile
+from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from google.cloud import storage
@@ -415,7 +415,7 @@ def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = G
     if _gemini_cache_name and model == GEMINI_MODEL:
         prompt = f"Analyze this contract:\n\n{contract_text}"
         config = genai_types.GenerateContentConfig(
-            temperature=0,
+            temperature=0.4,
             response_mime_type="application/json",
             response_schema=_RESPONSE_SCHEMA,
             cached_content=_gemini_cache_name,
@@ -423,7 +423,7 @@ def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = G
     else:
         prompt = _build_prompt(contract_text, similar_clauses)
         config = genai_types.GenerateContentConfig(
-            temperature=0,
+            temperature=0.4,
             response_mime_type="application/json",
             response_schema=_RESPONSE_SCHEMA,
         )
@@ -433,7 +433,9 @@ def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = G
             contents=prompt,
             config=config,
         )
-        return json.loads(response.text)
+        result = json.loads(response.text)
+        print(f"[GEMINI] risks={len(result.get('risks',[]))} clauses={len(result.get('clauses',[]))}")
+        return result
     except Exception as e:
         print(f"Gemini call failed: {e}")
         return {"clauses": [], "risks": [], "summary": ""}
@@ -826,7 +828,6 @@ async def analyse_authenticated(
 async def analyse_stream(
     file: UploadFile = File(...),
     authorization: Optional[str] = Header(None),
-    force: bool = Query(False),
 ):
     user_id  = _verify_token(authorization)
     filename = _original_filename(file)
@@ -842,7 +843,7 @@ async def analyse_stream(
         try:
             yield _sse("Reading document…")
             file_hash = _file_hash(content)
-            cached    = None if force else await loop.run_in_executor(_executor, lambda: _get_cached(user_id, file_hash))
+            cached    = await loop.run_in_executor(_executor, lambda: _get_cached(user_id, file_hash))
             if cached:
                 new_id = str(uuid.uuid4())
                 asyncio.create_task(_bg_save(user_id, cached["filename"], file_hash, new_id, cached["analysis"]))

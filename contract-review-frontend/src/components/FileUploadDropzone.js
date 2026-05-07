@@ -158,7 +158,7 @@ export function FileUploadDropzone({ token }) {
     [pickFile]
   );
 
-  const upload = async (force = false) => {
+  const upload = async () => {
     if (!file) return;
     resetMessages();
     setUploading(true);
@@ -166,8 +166,7 @@ export function FileUploadDropzone({ token }) {
     const formData = new FormData();
     formData.append('file', file);
 
-    const base     = token ? apiUrl('/analyse/stream') : apiUrl('/analyse/guest/stream');
-    const endpoint = force ? `${base}?force=true` : base;
+    const endpoint = token ? apiUrl('/analyse/stream') : apiUrl('/analyse/guest/stream');
     const headers  = token ? { Authorization: `Bearer ${token}` } : {};
 
     try {
@@ -381,16 +380,9 @@ export function FileUploadDropzone({ token }) {
           )}
 
           {result?.status === 'success' && (
-            <div className="result-actions">
-              <button className="download-btn" onClick={downloadPDF}>
-                Download Report (PDF)
-              </button>
-              {token && (
-                <button className="reanalyse-btn" onClick={() => upload(true)} disabled={uploading}>
-                  Re-analyse
-                </button>
-              )}
-            </div>
+            <button className="download-btn" onClick={downloadPDF}>
+              Download Report (PDF)
+            </button>
           )}
 
           {error && (
