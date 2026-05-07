@@ -415,7 +415,7 @@ def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = G
     if _gemini_cache_name and model == GEMINI_MODEL:
         prompt = f"Analyze this contract:\n\n{contract_text}"
         config = genai_types.GenerateContentConfig(
-            temperature=0.4,
+            temperature=0,
             response_mime_type="application/json",
             response_schema=_RESPONSE_SCHEMA,
             cached_content=_gemini_cache_name,
@@ -423,7 +423,7 @@ def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = G
     else:
         prompt = _build_prompt(contract_text, similar_clauses)
         config = genai_types.GenerateContentConfig(
-            temperature=0.4,
+            temperature=0,
             response_mime_type="application/json",
             response_schema=_RESPONSE_SCHEMA,
         )
