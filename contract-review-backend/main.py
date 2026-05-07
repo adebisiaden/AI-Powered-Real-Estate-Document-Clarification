@@ -1,4 +1,3 @@
-import hashlib
 import io
 import json
 import os
@@ -412,6 +411,7 @@ from concurrent.futures import ThreadPoolExecutor
 _executor = ThreadPoolExecutor(max_workers=4)
 
 def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = GEMINI_MODEL) -> dict:
+    global _gemini_cache_name
     if _gemini_cache_name and model == GEMINI_MODEL:
         prompt = f"Analyze this contract:\n\n{contract_text}"
         config = genai_types.GenerateContentConfig(
@@ -437,8 +437,13 @@ def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = G
         print(f"[GEMINI] risks={len(result.get('risks',[]))} clauses={len(result.get('clauses',[]))}")
         return result
     except Exception as e:
-        print(f"Gemini call failed: {e}")
-        return {"clauses": [], "risks": [], "summary": ""}
+        if "expired" in str(e).lower():
+            global _gemini_cache_name
+            _gemini_cache_name = None
+            print(f"Gemini context cache expired — cleared, will fall back to RAG")
+        else:
+            print(f"Gemini call failed: {e}")
+        raise
 
 
 def _merge_results(results: list[dict]) -> dict:
@@ -486,10 +491,12 @@ def _run_rag_pipeline(text: str) -> dict:
     t0 = time.time()
 
     if _gemini_cache_name:
-        # Context cache holds all CUAD/ACORD examples — skip embedding entirely
-        result = _call_gemini(text[:MAX_GEMINI_CHARS], [])
-        print(f"[TIMING] Gemini call with context cache: {time.time() - t0:.2f}s")
-        return result
+        try:
+            result = _call_gemini(text[:MAX_GEMINI_CHARS], [])
+            print(f"[TIMING] Gemini call with context cache: {time.time() - t0:.2f}s")
+            return result
+        except Exception:
+            pass  # cache expired or failed — fall through to RAG
 
     # Fallback: dynamic RAG (embed → retrieve → generate)
     if _vectors is None or not _clauses:
@@ -532,43 +539,18 @@ def _gcs_client() -> storage.Client:
     return _gcs
 
 
-def _file_hash(content: bytes) -> str:
-    return hashlib.sha256(content).hexdigest()
-
-
-def _cache_blob(user_id: str, file_hash: str) -> str:
-    return f"users/{user_id}/cache/{file_hash}.json"
-
-
-def _get_cached(user_id: str, file_hash: str) -> Optional[dict]:
-    try:
-        bucket = _gcs_client().bucket(BUCKET_NAME)
-        data = json.loads(bucket.blob(_cache_blob(user_id, file_hash)).download_as_bytes())
-        # New format: full analysis stored inline
-        if "analysis" in data:
-            return data
-        # Old format: pointer to analyses record
-        return json.loads(bucket.blob(f"users/{user_id}/analyses/{data['record_id']}.json").download_as_bytes())
-    except Exception:
-        return None
-
-
-def _save_analysis(user_id: str, filename: str, file_hash: str, analysis: dict) -> tuple:
+def _save_analysis(user_id: str, filename: str, analysis: dict) -> tuple:
     record_id = str(uuid.uuid4())
     record = {
         "record_id":  record_id,
         "user_id":    user_id,
         "filename":   filename,
-        "file_hash":  file_hash,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "analysis":   analysis,
     }
     bucket = _gcs_client().bucket(BUCKET_NAME)
     bucket.blob(f"users/{user_id}/analyses/{record_id}.json").upload_from_string(
         json.dumps(record), content_type="application/json"
-    )
-    bucket.blob(_cache_blob(user_id, file_hash)).upload_from_string(
-        json.dumps({"record_id": record_id}), content_type="application/json"
     )
     return record_id, record
 
@@ -630,23 +612,18 @@ def _sse_error(msg: str) -> str:
     return f"data: {json.dumps({'type': 'error', 'message': msg})}\n\n"
 
 
-async def _bg_save(user_id: str, filename: str, file_hash: str, record_id: str, analysis: dict):
+async def _bg_save(user_id: str, filename: str, record_id: str, analysis: dict):
     def _do():
         record = {
             "record_id":  record_id,
             "user_id":    user_id,
             "filename":   filename,
-            "file_hash":  file_hash,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "analysis":   analysis,
         }
         try:
             bucket = _gcs_client().bucket(BUCKET_NAME)
             bucket.blob(f"users/{user_id}/analyses/{record_id}.json").upload_from_string(
-                json.dumps(record), content_type="application/json"
-            )
-            # Store full analysis in cache so it survives history deletion
-            bucket.blob(_cache_blob(user_id, file_hash)).upload_from_string(
                 json.dumps(record), content_type="application/json"
             )
         except Exception as e:
@@ -774,22 +751,11 @@ async def analyse_authenticated(
         raise HTTPException(status_code=400, detail="Empty file")
     if len(content) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail=f"File too large. Max: {MAX_UPLOAD_BYTES // (1024*1024)} MB")
-    file_hash = _file_hash(content)
-    cached    = _get_cached(user_id, file_hash)
-    if cached:
-        return {
-            "record_id": cached["record_id"],
-            "filename":  cached["filename"],
-            "status":    "success",
-            "analysis":  cached["analysis"],
-            "cached":    True,
-        }
-
     _log("analyse_start", actor=user_id, filename=filename, size=len(content))
     t0        = time.time()
     text      = _extract_text(content, filename)
     analysis  = _run_rag_pipeline(text)
-    record_id, _ = _save_analysis(user_id, filename, file_hash, analysis)
+    record_id, _ = _save_analysis(user_id, filename, analysis)
     _log("analyse_complete", actor=user_id, filename=filename, record_id=record_id, duration_ms=int((time.time()-t0)*1000))
     return {"record_id": record_id, "filename": filename, "status": "success", "analysis": analysis}
 
@@ -812,28 +778,19 @@ async def analyse_stream(
         loop = asyncio.get_running_loop()
         try:
             yield _sse("Reading document…")
-            file_hash = _file_hash(content)
-            cached    = await loop.run_in_executor(_executor, lambda: _get_cached(user_id, file_hash))
-            if cached:
-                new_id = str(uuid.uuid4())
-                asyncio.create_task(_bg_save(user_id, cached["filename"], file_hash, new_id, cached["analysis"]))
-                yield _sse_result({
-                    "record_id": new_id,
-                    "filename":  cached["filename"],
-                    "status":    "success",
-                    "analysis":  cached["analysis"],
-                    "cached":    True,
-                })
-                return
-
             text = await loop.run_in_executor(_executor, lambda: _extract_text(content, filename))
 
+            analysis = None
             if _gemini_cache_name:
-                yield _sse("Analysing with AI…")
-                analysis = await loop.run_in_executor(
-                    _executor, lambda: _call_gemini(text[:MAX_GEMINI_CHARS], [])
-                )
-            else:
+                try:
+                    yield _sse("Analysing with AI…")
+                    analysis = await loop.run_in_executor(
+                        _executor, lambda: _call_gemini(text[:MAX_GEMINI_CHARS], [])
+                    )
+                except Exception:
+                    analysis = None  # cache expired — fall through to RAG
+
+            if analysis is None:
                 yield _sse("Finding relevant clauses…")
                 def _rag():
                     vec = _embed_chunks([text[:CHUNK_WORDS * 6]])
@@ -845,7 +802,7 @@ async def analyse_stream(
                 )
 
             record_id = str(uuid.uuid4())
-            asyncio.create_task(_bg_save(user_id, filename, file_hash, record_id, analysis))
+            asyncio.create_task(_bg_save(user_id, filename, record_id, analysis))
             yield _sse_result({
                 "record_id": record_id,
                 "filename":  filename,
