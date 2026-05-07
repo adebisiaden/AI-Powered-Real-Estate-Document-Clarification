@@ -4,25 +4,29 @@ import { useAuth } from './contexts/AuthContext';
 import { FileUploadDropzone } from './components/FileUploadDropzone';
 import LoginPage from './components/LoginPage';
 import UserMenu from './components/UserMenu';
+import HistoryPage from './components/HistoryPage';
 import './App.css';
 
 function App() {
   const { user, token, loading } = useAuth();
   const [guestMode, setGuestMode] = useState(false);
+  const [page, setPage] = useState('upload');
 
-  // Listen for the "Continue as Guest" event fired by LoginPage
   useEffect(() => {
     const handler = () => setGuestMode(true);
     document.addEventListener('lease:continue-as-guest', handler);
     return () => document.removeEventListener('lease:continue-as-guest', handler);
   }, []);
 
-  // If the guest signs in mid-session, drop out of guest mode
   useEffect(() => {
     if (user) setGuestMode(false);
   }, [user]);
 
-  // ── Loading splash ──────────────────────────────────────────────────────────
+  // Reset to upload page if user signs out
+  useEffect(() => {
+    if (!user && !guestMode) setPage('upload');
+  }, [user, guestMode]);
+
   if (loading) {
     return (
       <div className="App-loading">
@@ -33,12 +37,10 @@ function App() {
     );
   }
 
-  // ── Login screen ────────────────────────────────────────────────────────────
   if (!user && !guestMode) {
     return <LoginPage />;
   }
 
-  // ── Main app ────────────────────────────────────────────────────────────────
   return (
     <div className="App">
       <nav className="App-nav">
@@ -50,6 +52,23 @@ function App() {
           </div>
         </div>
 
+        {user && (
+          <div className="App-nav-center">
+            <button
+              className={`App-nav-tab ${page === 'upload' ? 'App-nav-tab--active' : ''}`}
+              onClick={() => setPage('upload')}
+            >
+              Analyse
+            </button>
+            <button
+              className={`App-nav-tab ${page === 'history' ? 'App-nav-tab--active' : ''}`}
+              onClick={() => setPage('history')}
+            >
+              History
+            </button>
+          </div>
+        )}
+
         <div className="App-nav-right">
           {user ? (
             <UserMenu />
@@ -60,7 +79,7 @@ function App() {
                 className="App-nav-signin-btn"
                 onClick={() => setGuestMode(false)}
               >
-                Sign in to save
+                Sign in
               </button>
             </>
           )}
@@ -68,8 +87,8 @@ function App() {
       </nav>
 
       <main className="App-main">
-        {/* token is null for guests — api.js routes to /analyse/guest automatically */}
-        <FileUploadDropzone token={token} />
+        {page === 'upload' && <FileUploadDropzone token={token} />}
+        {page === 'history' && user && <HistoryPage token={token} />}
       </main>
     </div>
   );
