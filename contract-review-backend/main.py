@@ -538,9 +538,12 @@ def _cache_blob(user_id: str, file_hash: str) -> str:
 def _get_cached(user_id: str, file_hash: str) -> Optional[dict]:
     try:
         bucket = _gcs_client().bucket(BUCKET_NAME)
-        ref    = json.loads(bucket.blob(_cache_blob(user_id, file_hash)).download_as_bytes())
-        record = json.loads(bucket.blob(f"users/{user_id}/analyses/{ref['record_id']}.json").download_as_bytes())
-        return record
+        data = json.loads(bucket.blob(_cache_blob(user_id, file_hash)).download_as_bytes())
+        # New format: full analysis stored inline
+        if "analysis" in data:
+            return data
+        # Old format: pointer to analyses record
+        return json.loads(bucket.blob(f"users/{user_id}/analyses/{data['record_id']}.json").download_as_bytes())
     except Exception:
         return None
 
@@ -605,16 +608,7 @@ def _delete_analysis(user_id: str, record_id: str) -> None:
     blob_name = f"users/{user_id}/analyses/{record_id}.json"
     try:
         bucket = _gcs_client().bucket(BUCKET_NAME)
-        blob   = bucket.blob(blob_name)
-        # Read record first to get file_hash for cache invalidation
-        try:
-            record    = json.loads(blob.download_as_bytes())
-            file_hash = record.get("file_hash")
-            if file_hash:
-                bucket.blob(_cache_blob(user_id, file_hash)).delete()
-        except Exception:
-            pass
-        blob.delete()
+        bucket.blob(blob_name).delete()
     except Exception:
         raise HTTPException(status_code=404, detail="Record not found")
 
@@ -646,8 +640,9 @@ async def _bg_save(user_id: str, filename: str, file_hash: str, record_id: str, 
             bucket.blob(f"users/{user_id}/analyses/{record_id}.json").upload_from_string(
                 json.dumps(record), content_type="application/json"
             )
+            # Store full analysis in cache so it survives history deletion
             bucket.blob(_cache_blob(user_id, file_hash)).upload_from_string(
-                json.dumps({"record_id": record_id}), content_type="application/json"
+                json.dumps(record), content_type="application/json"
             )
         except Exception as e:
             print(f"Background save failed: {e}")
@@ -812,8 +807,10 @@ async def analyse_stream(
             file_hash = _file_hash(content)
             cached    = await loop.run_in_executor(_executor, lambda: _get_cached(user_id, file_hash))
             if cached:
+                new_id = str(uuid.uuid4())
+                asyncio.create_task(_bg_save(user_id, cached["filename"], file_hash, new_id, cached["analysis"]))
                 yield _sse_result({
-                    "record_id": cached["record_id"],
+                    "record_id": new_id,
                     "filename":  cached["filename"],
                     "status":    "success",
                     "analysis":  cached["analysis"],
