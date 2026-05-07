@@ -27,6 +27,8 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+_executor = ThreadPoolExecutor(max_workers=4)
+
 import vertexai
 from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 from google import genai as genai_sdk
@@ -405,13 +407,7 @@ Contract to analyze:
 {contract_text}"""
 
 
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
-_executor = ThreadPoolExecutor(max_workers=4)
-
 def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = GEMINI_MODEL) -> dict:
-    global _gemini_cache_name
     if _gemini_cache_name and model == GEMINI_MODEL:
         prompt = f"Analyze this contract:\n\n{contract_text}"
         config = genai_types.GenerateContentConfig(
@@ -438,9 +434,7 @@ def _call_gemini(contract_text: str, similar_clauses: list[dict], model: str = G
         return result
     except Exception as e:
         if "expired" in str(e).lower():
-            global _gemini_cache_name
-            _gemini_cache_name = None
-            print(f"Gemini context cache expired — cleared, will fall back to RAG")
+            print(f"Gemini context cache expired — will fall back to RAG")
         else:
             print(f"Gemini call failed: {e}")
         raise
