@@ -34,6 +34,8 @@ from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 from google import genai as genai_sdk
 from google.genai import types as genai_types
 
+import mlflow
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -50,6 +52,9 @@ PROJECT_ID        = os.getenv("GCP_PROJECT_ID")
 LOCATION          = os.getenv("GCP_LOCATION", "us-central1")
 BUCKET_NAME       = os.getenv("GCS_BUCKET_NAME")
 GEMINI_MODEL      = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://136.113.202.167:5000")
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_experiment("contract-review")
 GEMINI_GUEST_MODEL = GEMINI_MODEL
 EMBED_MODEL       = "gemini-embedding-001"
 FIREBASE_PROJECT  = os.getenv("FIREBASE_PROJECT_ID", "contract-review-1e807")
@@ -510,10 +515,21 @@ def _run_rag_pipeline(text: str) -> dict:
     if _gemini_cache_name:
         try:
             result = _call_gemini(text[:MAX_GEMINI_CHARS], [])
-            print(f"[TIMING] Gemini call with context cache: {time.time() - t0:.2f}s")
+            duration = time.time() - t0
+            print(f"[TIMING] Gemini call with context cache: {duration:.2f}s")
+            try:
+                with mlflow.start_run():
+                    mlflow.log_param("model", GEMINI_MODEL)
+                    mlflow.log_param("pipeline", "cache")
+                    mlflow.log_metric("duration_seconds", round(duration, 2))
+                    mlflow.log_metric("contract_length_chars", len(text))
+                    mlflow.log_metric("risks_found", len(result.get("risks", [])))
+                    mlflow.log_metric("clauses_found", sum(1 for c in result.get("clauses", []) if c.get("found")))
+            except Exception as e:
+                print(f"[MLflow] logging failed (non-fatal): {e}")
             return result
         except Exception:
-            pass  # cache expired or failed — fall through to RAG
+            pass
 
     # Fallback: dynamic RAG (embed → retrieve → generate)
     if _vectors is None or not _clauses:
