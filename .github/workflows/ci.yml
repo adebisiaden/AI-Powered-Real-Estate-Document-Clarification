@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: Backend Tests (Python)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: contract-review-backend/requirements.txt
+
+      - name: Install backend dependencies
+        run: |
+          pip install -r contract-review-backend/requirements.txt
+          pip install pytest pytest-cov bandit mlflow
+
+      - name: Run tests
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_LOCATION: us-central1
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_PATH }}
+        run: |
+          pytest tests/ \
+            --ignore=tests/test_security_bandit.py \
+            --ignore=tests/test_data_and_model.py \
+            -v --tb=short
+
+      - name: Run security scan (Bandit)
+        run: |
+          bandit -r contract-review-backend/ \
+            --exclude contract-review-backend/mlops,contract-review-backend/.venv \
+            -ll -q
+
+  frontend-build:
+    name: Frontend Build (React)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: contract-review-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: contract-review-frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: contract-review-frontend
+        env:
+          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
+          REACT_APP_FIREBASE_API_KEY: ${{ secrets.REACT_APP_FIREBASE_API_KEY }}
+          REACT_APP_FIREBASE_PROJECT_ID: ${{ secrets.REACT_APP_FIREBASE_PROJECT_ID }}
+          CI: false
+        run: npm run build
+
+  docker-build:
+    name: Docker Build (Backend)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t legaleyes-backend:${{ github.sha }} .
