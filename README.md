@@ -37,6 +37,7 @@ An intelligent contract review tool that analyzes legal documents using a RAG (R
 - **Google Gemini** (`gemini-2.5-flash`) — contract analysis via `google-genai` SDK
 - **Google Cloud Storage** — stores uploaded contracts and the prebuilt vector index
 - **RAG Pipeline** — CUAD + ACORD legal datasets (10,928 clauses, 3072-dim vectors), cosine similarity retrieval, top-10 context injection
+- **MLflow** — experiment tracking for contract analysis runs (model params, token counts, latency)
 - **PyPDF2 / python-docx** — text extraction from PDF and DOCX files
 
 ### Frontend
@@ -56,8 +57,13 @@ An intelligent contract review tool that analyzes legal documents using a RAG (R
 
 ```
 AI-Powered-Real-Estate-Document-Clarification/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml               # Backend tests, frontend build, Docker build
+│       └── deploy.yml           # Deploy frontend to Vercel, push image to GCR
 ├── contract-review-backend/
-│   ├── main.py                  # FastAPI app + RAG pipeline
+│   ├── authorization/           # Firebase auth service
+│   ├── main.py                  # FastAPI app + RAG pipeline + MLflow tracking
 │   ├── requirements.txt
 │   ├── test_analyze.py          # Local CLI test script
 │   └── .env                     # GCP credentials (gitignored)
@@ -70,9 +76,12 @@ AI-Powered-Real-Estate-Document-Clarification/
 │   │   ├── api.js               # API URL helper (supports REACT_APP_API_BASE_URL)
 │   │   └── setupProxy.js        # Dev proxy to FastAPI
 │   └── .env.production          # Production API URL (points to Cloud Run)
+├── app/
+│   └── main.py                  # Standalone entry point
 ├── tests/
 │   ├── fixtures/
 │   │   └── sample_contract.pdf
+│   ├── test_data_and_model.py
 │   ├── test_empty_file.py
 │   ├── test_file_size_limit.py
 │   ├── test_file_validation.py
@@ -157,7 +166,7 @@ python test_analyze.py path/to/contract.pdf
 pytest tests/ -v
 ```
 
-16 tests, all passing:
+20 tests, all passing:
 
 | Test | What It Covers |
 |---|---|
@@ -170,6 +179,20 @@ pytest tests/ -v
 | `test_mime_type` | Unit test for `_mime_for_filename()` helper |
 | `test_security_bandit` | Bandit static analysis — no hardcoded secrets in source |
 | `test_upload_response_schema` | Successful upload returns `filename`, `text`, `status` keys |
+| `test_data_and_model` (×9) | Data quality: text extraction, chunking coverage, empty input; Model output: risk deduplication, clause `found` merging, cosine similarity correctness |
+
+---
+
+## CI/CD
+
+GitHub Actions runs automatically on every push and pull request to `main`.
+
+| Workflow | Trigger | Jobs |
+|---|---|---|
+| **CI** (`.github/workflows/ci.yml`) | Push / PR to `main` | Backend tests (pytest), Bandit security scan, React build, Docker build |
+| **Deploy** (`.github/workflows/deploy.yml`) | Push to `main` | Deploy frontend to Vercel (prod), push backend Docker image to GCR |
+
+Required GitHub secrets: `GCP_SA_KEY`, `GCP_PROJECT_ID`, `MLFLOW_TRACKING_URI`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `REACT_APP_API_URL`, `REACT_APP_FIREBASE_API_KEY`, `REACT_APP_FIREBASE_PROJECT_ID`.
 
 ---
 
@@ -266,11 +289,13 @@ Send pre-extracted text directly for analysis.
 
 | Branch | Purpose |
 |---|---|
-| `main` | Stable base |
+| `main` | Stable base — CI/CD deploys from here |
 | `FastAPI/RAG` | Backend RAG pipeline + Gemini integration |
 | `UI` | Frontend split-panel layout and PDF viewer |
-| `deployment/testcases` | Deployment config + all 16 tests passing |
+| `deployment/testcases` | Deployment config + 20 tests passing |
 | `CUAD/ACORD` | Vector index build script |
+| `feature/gcs-history-and-filename-cache` | GCS upload history + filename caching |
+| `ui-lease-lens-branding-and-pdf-export` | UI rebrand + PDF export feature |
 
 ---
 
